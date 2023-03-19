@@ -1,0 +1,46 @@
+# Invoice
+
+## Properties
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**document_id** | **str** |  | [optional] 
+**document_type** | **str** |  | [optional] 
+**original_order_id** | **str** |  | [optional] 
+**currency_id** | **str** |  | [optional] 
+**prices_incl_tax** | **float** |  | [optional] 
+**status** | **str** |  | [optional] 
+**sales_person_id** | **str** |  | [optional] 
+**sales_person_name** | **str** |  | [optional] 
+**contact_id** | **str** |  | [optional] 
+**contact_name** | **str** |  | [optional] 
+**tax_percent** | **float** |  | [optional] 
+**tax_amount** | **float** |  | [optional] 
+**invoice_discount** | **float** |  | [optional] 
+**subtotal** | **float** |  | [optional] 
+**total_excl_tax** | **float** |  | [optional] 
+**total_incl_tax** | **float** |  | [optional] 
+**order_date** | **str** |  | [optional] 
+**posting_date** | **str** |  | [optional] 
+**document_date** | **str** |  | [optional] 
+**due_date** | **str** |  | [optional] 
+**shipment_date** | **str** |  | [optional] 
+**payment_terms_code** | **str** |  | [optional] 
+**payment_method_name** | **str** |  | [optional] 
+**payment_status** | **str** |  | [optional] 
+**payment_transaction_id** | **str** |  | [optional] 
+**location_code** | **str** |  | [optional] 
+**shipping_method_code** | **str** |  | [optional] 
+**customer_id** | **str** |  | [optional] 
+**reference_no** | **str** |  | [optional] 
+**shop_account_email** | **str** |  | [optional] 
+**outstanding_amount** | **float** |  | [optional] 
+**shipping_method_name** | **str** |  | [optional] 
+**order_lines_count** | **int** |  | [optional] 
+**sell_to_address** | [**Address**](Address.md) |  | [optional] 
+**bill_to_address** | [**Address**](Address.md) |  | [optional] 
+**ship_to_address** | [**Address**](Address.md) |  | [optional] 
+**sales_lines** | [**list[Salesline]**](Salesline.md) |  | [optional] 
+**tax_lines** | [**list[Taxline]**](Taxline.md) |  | [optional] 
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
