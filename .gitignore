@@ -3,8 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-cred.py
-
 # C extensions
 *.so
 
@@ -64,5 +62,3 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
-
-venv/

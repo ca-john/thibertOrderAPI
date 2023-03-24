@@ -1,6 +1,6 @@
-# swagger-client
-API for order retrieval and submission from the Thibert Inc. API
-- API version: 1
+# thibert-client
+
+- API version: V1 DEVELOPMENT
 - Package version: 1.0.0
 - Build package: io.swagger.codegen.v3.generators.python.PythonClientCodegen
 
@@ -9,10 +9,10 @@ API for order retrieval and submission from the Thibert Inc. API
 Python 2.7 and 3.4+
 
 ## Installation & Usage
-### pip install
 
 
-Import the package:
+
+Then import the package:
 ```python
 import swagger_client 
 ```
@@ -96,4 +96,4 @@ Class | Method | HTTP request | Description
 
 
 ## Author
-Momin Naseem
+
