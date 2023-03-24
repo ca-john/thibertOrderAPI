@@ -2,20 +2,12 @@
 
 - API version: V1 DEVELOPMENT
 - Package version: 1.0.0
-- Build package: io.swagger.codegen.v3.generators.python.PythonClientCodegen
 
 ## Requirements.
 
 Python 2.7 and 3.4+
 
 ## Installation & Usage
-
-
-
-Then import the package:
-```python
-import swagger_client 
-```
 
 ### Setuptools
 
