@@ -9,12 +9,11 @@ import re
 import six
 import cred
 
-
 HOST: str = cred.HOST
 KEY: str = cred.KEY
 JSON_URL: str = cred.JSON_URL
 LOG_FILE: str = "order_log.csv"
-
+TIMEOUT = 500    # seconds
 
 ENDPOINT_DICT: Dict = {
     "order": "/api/Order",
@@ -25,33 +24,25 @@ ENDPOINT_DICT: Dict = {
 }
 
 
-
-
-
-
-
 class OrderLine(object):
-    """ Class for order lines.  # noqa: E501
-    
+    """Class for order lines.
+
     Attributes:
       swagger_types (dict): The key is attribute name
                             and the value is attribute type.
       attribute_map (dict): The key is attribute name
                             and the value is json key in definition.
     """
-    
-    swagger_types = {
-        'thibert_part_number': 'str',
-        'quantity': 'int'
-    }
+
+    swagger_types = {"thibert_part_number": "str", "quantity": "int"}
 
     attribute_map = {
-        'thibert_part_number': 'thibertPartNumber',
-        'quantity': 'quantity'
+        "thibert_part_number": "thibertPartNumber",
+        "quantity": "quantity"
     }
 
-    def __init__(self, thibert_part_number=None, quantity=None):  # noqa: E501
-        """OrderLine - a model defined in Swagger"""  # noqa: E501
+    def __init__(self, thibert_part_number=None, quantity=None):    # noqa: E501
+        """OrderLine - a model defined in Swagger."""
         self._thibert_part_number = None
         self._quantity = None
         self.discriminator = None
@@ -62,7 +53,7 @@ class OrderLine(object):
 
     @property
     def thibert_part_number(self):
-        """Gets the thibert_part_number of this OrderLine.  # noqa: E501
+        """Get the thibert_part_number of this OrderLine.
 
         Part number in the Thibert database.  # noqa: E501
 
@@ -73,19 +64,18 @@ class OrderLine(object):
 
     @thibert_part_number.setter
     def thibert_part_number(self, thibert_part_number):
-        """Sets the thibert_part_number of this OrderLine.
+        """Set the thibert_part_number of this OrderLine.
 
         Part number in the Thibert database.  # noqa: E501
 
         :param thibert_part_number: The thibert_part_number of this OrderLine.  # noqa: E501
         :type: str
         """
-
         self._thibert_part_number = thibert_part_number
 
     @property
     def quantity(self):
-        """Gets the quantity of this OrderLine.  # noqa: E501
+        """Get the quantity of this OrderLine.
 
         Quantity to ship.  # noqa: E501
 
@@ -96,35 +86,34 @@ class OrderLine(object):
 
     @quantity.setter
     def quantity(self, quantity):
-        """Sets the quantity of this OrderLine.
+        """Set the quantity of this OrderLine.
 
         Quantity to ship.  # noqa: E501
 
         :param quantity: The quantity of this OrderLine.  # noqa: E501
         :type: int
         """
-
         self._quantity = quantity
 
     def to_dict(self):
-        """Returns the model properties as a dict"""
+        """Return the model properties as a dict."""
         result = {}
 
         for attr, _ in six.iteritems(self.swagger_types):
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = list(
+                    map(lambda x: x.to_dict()
+                        if hasattr(x, "to_dict") else x, value))
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
-                result[attr] = dict(map(
-                    lambda item: (item[0], item[1].to_dict())
-                    if hasattr(item[1], "to_dict") else item,
-                    value.items()
-                ))
+                result[attr] = dict(
+                    map(
+                        lambda item: (item[0], item[1].to_dict())
+                        if hasattr(item[1], "to_dict") else item,
+                        value.items(),
+                    ))
             else:
                 result[attr] = value
         if issubclass(OrderLine, dict):
@@ -134,37 +123,30 @@ class OrderLine(object):
         return result
 
     def to_str(self):
-        """Returns the string representation of the model"""
+        """Return the string representation of the model."""
         return pprint.pformat(self.to_dict())
 
     def __repr__(self):
-        """For `print` and `pprint`"""
+        """For `print` and `pprint`."""
         return self.to_str()
 
     def __eq__(self, other):
-        """Returns true if both objects are equal"""
+        """Return true if both objects are equal."""
         if not isinstance(other, OrderLine):
             return False
 
         return self.__dict__ == other.__dict__
 
     def __ne__(self, other):
-        """Returns true if both objects are not equal"""
+        """Return true if both objects are not equal."""
         return not self == other
 
 
-
-
-
-
-
-
-
 class Order(object):
-    """Class for an order.  # noqa: E501
+    """Class for an order.
 
     Do not edit the class manually.
-    
+
     Attributes:
       swagger_types (dict): The key is attribute name
                             and the value is attribute type.
@@ -173,22 +155,27 @@ class Order(object):
     """
 
     swagger_types = {
-        'order_reference_number': 'str',
-        'shipping_address': 'Address',
-        'contact_info': 'Contact',
-        'order_lines': 'list[OrderLine]'
+        "order_reference_number": "str",
+        "shipping_address": "Address",
+        "contact_info": "Contact",
+        "order_lines": "list[OrderLine]",
     }
 
     attribute_map = {
-        'order_reference_number': 'orderReferenceNumber',
-        'shipping_address': 'shippingAddress',
-        'contact_info': 'contactInfo',
-        'order_lines': 'orderLines'
+        "order_reference_number": "orderReferenceNumber",
+        "shipping_address": "shippingAddress",
+        "contact_info": "contactInfo",
+        "order_lines": "orderLines",
     }
 
-    def __init__(self, order_reference_number=None,
-                 shipping_address=None, contact_info=None, order_lines=None):  # noqa: E501
-        """Order - a model defined in Swagger"""  # noqa: E501
+    def __init__(
+        self,
+        order_reference_number=None,
+        shipping_address=None,
+        contact_info=None,
+        order_lines=None,
+    ):    # noqa: E501
+        """Order - a model defined in Swagger."""
         self._order_reference_number = None
         self._shipping_address = None
         self._contact_info = None
@@ -205,7 +192,7 @@ class Order(object):
 
     @property
     def order_reference_number(self):
-        """Gets the order_reference_number of this Order.  # noqa: E501
+        """Get the order_reference_number of this Order.
 
         User inputed for personnal reference.  # noqa: E501
 
@@ -216,20 +203,18 @@ class Order(object):
 
     @order_reference_number.setter
     def order_reference_number(self, order_reference_number):
-        """Sets the order_reference_number of this Order.
+        """Set the order_reference_number of this Order.
 
         User inputed for personnal reference.  # noqa: E501
 
         :param order_reference_number: The order_reference_number of this Order.  # noqa: E501
         :type: str
         """
-
         self._order_reference_number = order_reference_number
 
     @property
     def shipping_address(self):
-        """Gets the shipping_address of this Order.  # noqa: E501
-
+        """Get the shipping_address of this Order.
 
         :return: The shipping_address of this Order.  # noqa: E501
         :rtype: Address
@@ -238,19 +223,16 @@ class Order(object):
 
     @shipping_address.setter
     def shipping_address(self, shipping_address):
-        """Sets the shipping_address of this Order.
-
+        """Set the shipping_address of this Order.
 
         :param shipping_address: The shipping_address of this Order.  # noqa: E501
         :type: Address
         """
-
         self._shipping_address = shipping_address
 
     @property
     def contact_info(self):
-        """Gets the contact_info of this Order.  # noqa: E501
-
+        """Get the contact_info of this Order.
 
         :return: The contact_info of this Order.  # noqa: E501
         :rtype: Contact
@@ -259,18 +241,16 @@ class Order(object):
 
     @contact_info.setter
     def contact_info(self, contact_info):
-        """Sets the contact_info of this Order.
+        """Set the contact_info of this Order.
 
-
-        :param contact_info: The contact_info of this Order.  # noqa: E501
+        :param contact_info: The contact_info of this Order.
         :type: Contact
         """
-
         self._contact_info = contact_info
 
     @property
     def order_lines(self):
-        """Gets the order_lines of this Order.  # noqa: E501
+        """Gets the order_lines of this Order.
 
         Parts in the order.  # noqa: E501
 
@@ -281,35 +261,33 @@ class Order(object):
 
     @order_lines.setter
     def order_lines(self, order_lines):
-        """Sets the order_lines of this Order.
+        """Set the order_lines of this Order.
 
         Parts in the order.  # noqa: E501
-
         :param order_lines: The order_lines of this Order.  # noqa: E501
         :type: list[OrderLine]
         """
-
         self._order_lines = order_lines
 
     def to_dict(self):
-        """Returns the model properties as a dict"""
+        """Return the model properties as a dict."""
         result = {}
 
         for attr, _ in six.iteritems(self.swagger_types):
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = list(
+                    map(lambda x: x.to_dict()
+                        if hasattr(x, "to_dict") else x, value))
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
-                result[attr] = dict(map(
-                    lambda item: (item[0], item[1].to_dict())
-                    if hasattr(item[1], "to_dict") else item,
-                    value.items()
-                ))
+                result[attr] = dict(
+                    map(
+                        lambda item: (item[0], item[1].to_dict())
+                        if hasattr(item[1], "to_dict") else item,
+                        value.items(),
+                    ))
             else:
                 result[attr] = value
         if issubclass(Order, dict):
@@ -319,43 +297,33 @@ class Order(object):
         return result
 
     def to_str(self):
-        """Returns the string representation of the model"""
+        """Return the string representation of the model."""
         return pprint.pformat(self.to_dict())
 
     def __repr__(self):
-        """For `print` and `pprint`"""
+        """For `print` and `pprint`."""
         return self.to_str()
 
     def __eq__(self, other):
-        """Returns true if both objects are equal"""
+        """Return true if both objects are equal."""
         if not isinstance(other, Order):
             return False
 
         return self.__dict__ == other.__dict__
 
     def __ne__(self, other):
-        """Returns true if both objects are not equal"""
+        """Return true if both objects are not equal."""
+
         return not self == other
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class APIConnector:
     """A base class for connecting to an API."""
 
-    def __init__(
-        self, base_url: str = HOST, api_key: str = KEY, authorization: str = KEY
-    ):
+    def __init__(self,
+                 base_url: str = HOST,
+                 api_key: str = KEY,
+                 authorization: str = KEY):
         """Initialize the API connector.
 
         Args:
@@ -379,8 +347,14 @@ class APIConnector:
             Any: The response data.
         """
         url = self.base_url + endpoint
-        headers = {"x-api-key": self.api_key, "Authorization": self.authorization}
-        response = requests.get(url, params=params, headers=headers)
+        headers = {
+            "x-api-key": self.api_key,
+            "Authorization": self.authorization
+        }
+        response = requests.get(url,
+                                params=params,
+                                headers=headers,
+                                timeout=TIMEOUT)
         return response.json()
 
 
@@ -420,7 +394,8 @@ class OrderAPI(APIConnector):
         """Create Fthe Order API connector with default HOST and KEY."""
         super().__init__()
 
-    def order(self, order: Dict[str, Union[str, Dict[str, Union[str, int]]]]) -> Any:
+    def order(self, order: Dict[str, Union[str, Dict[str, Union[str,
+                                                                int]]]]) -> Any:
         """Submit and order to the endpoint.
 
         Args:
@@ -522,7 +497,9 @@ def get_paths(url: str = JSON_URL) -> Dict[str, Dict]:
     return response_info.get("paths")
 
 
-def write_order_log(order_number: str, order_date: str, filename: str = LOG_FILE) -> None:
+def write_order_log(order_number: str,
+                    order_date: str,
+                    filename: str = LOG_FILE) -> None:
     """Write order the log to the log file, if it exists. Create the file if it does not.
 
     Args:
@@ -538,7 +515,7 @@ def write_order_log(order_number: str, order_date: str, filename: str = LOG_FILE
             writer = csv.writer(file)
             writer.writerow(header)
         file.close()
-    
+
     # Write the data to the file
     with open(filename, "a+", encoding="utf-8") as file:
         writer = csv.writer(file)
@@ -571,27 +548,26 @@ def main():
     #         models = api.get_vehicle_models(years[0], makes[0])
     #         print(f"Models for {years[0]} and {makes[0]}:", models)
     write_order_log("123456", "2021-01-01")
-    
-    
-    
+
     print("Thibert Order API\n")
-    
+
     ref_number: str = input("Enter the order reference number: ")
     customer_name: str = input("Enter the customer name: ")
     customer_shipping_address1: str = input("Enter shipping address1: ")
-    customer_shipping_address2: str = input("Enter shipping address2, press enter if empty: ")
+    customer_shipping_address2: str = input(
+        "Enter shipping address2, press enter if empty: ")
     customer_zip_code: str = input("Enter the zip code: ")
     customer_city: str = input("Enter the city: ")
     customer_state: str = input("Enter the state: ")
     country_code: str = input("Enter the country code: ")
-    
+
     contact_name: str = input("Enter the contact name: ")
     contact_email: str = input("Enter the contact email: ")
     contact_phone_number: str = input("Enter the contact phone number: ")
-    
+
     order_lines: List[Dict[str, Union[str, int]]] = []
-    
-    while(True):
+
+    while True:
         part_number = input("Enter the part number: ")
         quantity = input("Enter the quantity: ")
         if not (part_number and quantity):
@@ -600,18 +576,16 @@ def main():
         if not quantity.isdigit():
             print("Quantity must be a number.")
             continue
-        order_lines.append({"thibertPartNumber": part_number, "quantity": int(quantity)})
+        order_lines.append({
+            "thibertPartNumber": part_number,
+            "quantity": int(quantity)
+        })
         if input("Add another part? (y/n): ") == "n":
             break
-    
-    
-    
-    
+
     order_obj = Order()
     order_obj.order_lines = order_lines
-    
-    
-    
+
     order_dict = {
         "orderReferenceNumber": ref_number,
         "shippingAddress": {
@@ -621,17 +595,15 @@ def main():
             "zipCode": customer_zip_code,
             "city": customer_city,
             "state": customer_state,
-            "countryCode": country_code
+            "countryCode": country_code,
         },
         "contactInfo": {
             "name": contact_name,
             "email": contact_email,
-            "phoneNumber": contact_phone_number
+            "phoneNumber": contact_phone_number,
         },
-        
-        
     }
-    
+
 
 if __name__ == "__main__":
     main()
