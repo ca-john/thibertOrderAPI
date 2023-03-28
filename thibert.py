@@ -5,7 +5,6 @@ import requests
 from datetime import datetime
 from typing import Any, Dict, List, Union
 import pprint
-import re
 import six
 import cred
 
@@ -24,10 +23,6 @@ ENDPOINT_DICT: Dict = {
 }
 
 
-
-
-
-
 class Contact(object):
     """A class to represent a contact.
 
@@ -39,12 +34,8 @@ class Contact(object):
       attribute_map (dict): The key is attribute name
                             and the value is json key in definition.
     """
-    
-    swagger_types = {
-        'name': 'str',
-        'email': 'str',
-        'phone_number': 'str'
-    }
+
+    swagger_types = {'name': 'str', 'email': 'str', 'phone_number': 'str'}
 
     attribute_map = {
         'name': 'name',
@@ -52,7 +43,10 @@ class Contact(object):
         'phone_number': 'phoneNumber'
     }
 
-    def __init__(self, name=None, email=None, phone_number=None):  # noqa: E501
+    def __init__(self,
+                 name=None,
+                 email=None,
+                 phone_number=None):    # noqa: E501
         """Contact - a model defined in Swagger."""
         self._name = None
         self._email = None
@@ -67,7 +61,6 @@ class Contact(object):
     def name(self):
         """Get the name of this Contact.
 
-
         :return: The name of this Contact.  # noqa: E501
         :rtype: str
         """
@@ -77,19 +70,17 @@ class Contact(object):
     def name(self, name):
         """Set the name of this Contact.
 
-
         :param name: The name of this Contact.  # noqa: E501
         :type: str
         """
         if name is None:
-            raise ValueError("Invalid value for `name`, must not be `None`")  # noqa: E501
-
+            raise ValueError(
+                "Invalid value for `name`, must not be `None`")    # noqa: E501
         self._name = name
 
     @property
     def email(self):
         """Get the email of this Contact.
-
 
         :return: The email of this Contact.  # noqa: E501
         :rtype: str
@@ -100,17 +91,14 @@ class Contact(object):
     def email(self, email):
         """Set the email of this Contact.
 
-
         :param email: The email of this Contact.  # noqa: E501
         :type: str
         """
-
         self._email = email
 
     @property
     def phone_number(self):
         """Get the phone_number of this Contact.
-
 
         :return: The phone_number of this Contact.  # noqa: E501
         :rtype: str
@@ -121,12 +109,13 @@ class Contact(object):
     def phone_number(self, phone_number):
         """Set the phone_number of this Contact.
 
-
         :param phone_number: The phone_number of this Contact.  # noqa: E501
         :type: str
         """
         if phone_number is None:
-            raise ValueError("Invalid value for `phone_number`, must not be `None`")  # noqa: E501
+            raise ValueError(
+                "Invalid value for `phone_number`, must not be `None`"
+            )    # noqa: E501
 
         self._phone_number = phone_number
 
@@ -137,18 +126,17 @@ class Contact(object):
         for attr, _ in six.iteritems(self.swagger_types):
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = list(
+                    map(lambda x: x.to_dict()
+                        if hasattr(x, "to_dict") else x, value))
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
-                result[attr] = dict(map(
-                    lambda item: (item[0], item[1].to_dict())
-                    if hasattr(item[1], "to_dict") else item,
-                    value.items()
-                ))
+                result[attr] = dict(
+                    map(
+                        lambda item: (item[0], item[1].to_dict())
+                        if hasattr(item[1], "to_dict") else item,
+                        value.items()))
             else:
                 result[attr] = value
         if issubclass(Contact, dict):
@@ -175,8 +163,6 @@ class Contact(object):
     def __ne__(self, other):
         """Return true if both objects are not equal."""
         return not self == other
-
-
 
 
 class Address(object):
@@ -211,8 +197,14 @@ class Address(object):
         'country_code': 'countryCode'
     }
 
-    def __init__(self, name=None, address1=None, address2=None, 
-                 zip_code=None, city=None, state=None, country_code=None):  # noqa: E501
+    def __init__(self,
+                 name=None,
+                 address1=None,
+                 address2=None,
+                 zip_code=None,
+                 city=None,
+                 state=None,
+                 country_code=None):    # noqa: E501
         """Address - a model defined in Swagger."""
         self._name = None
         self._address1 = None
@@ -257,7 +249,6 @@ class Address(object):
         :param name: The name of this Address.  # noqa: E501
         :type: str
         """
-
         self._name = name
 
     @property
@@ -280,7 +271,6 @@ class Address(object):
         :param address1: The address1 of this Address.  # noqa: E501
         :type: str
         """
-
         self._address1 = address1
 
     @property
@@ -303,7 +293,6 @@ class Address(object):
         :param address2: The address2 of this Address.  # noqa: E501
         :type: str
         """
-
         self._address2 = address2
 
     @property
@@ -326,7 +315,6 @@ class Address(object):
         :param zip_code: The zip_code of this Address.  # noqa: E501
         :type: str
         """
-
         self._zip_code = zip_code
 
     @property
@@ -349,7 +337,6 @@ class Address(object):
         :param city: The city of this Address.  # noqa: E501
         :type: str
         """
-
         self._city = city
 
     @property
@@ -372,7 +359,6 @@ class Address(object):
         :param state: The state of this Address.  # noqa: E501
         :type: str
         """
-
         self._state = state
 
     @property
@@ -395,7 +381,6 @@ class Address(object):
         :param country_code: The country_code of this Address.  # noqa: E501
         :type: str
         """
-
         self._country_code = country_code
 
     def to_dict(self):
@@ -405,18 +390,17 @@ class Address(object):
         for attr, _ in six.iteritems(self.swagger_types):
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = list(
+                    map(lambda x: x.to_dict()
+                        if hasattr(x, "to_dict") else x, value))
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
-                result[attr] = dict(map(
-                    lambda item: (item[0], item[1].to_dict())
-                    if hasattr(item[1], "to_dict") else item,
-                    value.items()
-                ))
+                result[attr] = dict(
+                    map(
+                        lambda item: (item[0], item[1].to_dict())
+                        if hasattr(item[1], "to_dict") else item,
+                        value.items()))
             else:
                 result[attr] = value
         if issubclass(Address, dict):
@@ -443,7 +427,6 @@ class Address(object):
     def __ne__(self, other):
         """Return true if both objects are not equal."""
         return not self == other
-
 
 
 class OrderLine(object):
@@ -733,7 +716,6 @@ class Order(object):
 
     def __ne__(self, other):
         """Return true if both objects are not equal."""
-
         return not self == other
 
 
@@ -967,7 +949,7 @@ def main():
     #     if makes:
     #         models = api.get_vehicle_models(years[0], makes[0])
     #         print(f"Models for {years[0]} and {makes[0]}:", models)
-    write_order_log("123456", "2021-01-01")
+    # write_order_log("123456", "2021-01-01")
 
     print("Thibert Order API\n")
 
@@ -985,8 +967,9 @@ def main():
     contact_email: str = input("Enter the contact email: ")
     contact_phone_number: str = input("Enter the contact phone number: ")
 
-    order_lines: List[Dict[str, Union[str, int]]] = []
-
+    order_lines: List[OrderLine] = []
+    print("Order Line - Enter the part number and quantity for each part:")
+    print(" ")
     while True:
         part_number = input("Enter the part number: ")
         quantity = input("Enter the quantity: ")
@@ -996,38 +979,58 @@ def main():
         if not quantity.isdigit():
             print("Quantity must be a number.")
             continue
-        order_lines.append({
-            "thibertPartNumber": part_number,
-            "quantity": int(quantity)
-        })
+        # order_lines.append({
+        #     "thibertPartNumber": part_number,
+        #     "quantity": int(quantity)
+        # })
+
+        line_item = OrderLine()
+        line_item.thibert_part_number = part_number
+        line_item.quantity = int(quantity)
+        order_lines.append(line_item)
+
         if input("Add another part? (y/n): ") == "n":
             break
 
-    order_obj = Order()
-    order_obj.order_reference_number = ref_number
-    order_obj.customer_name = customer_name
-    
-    
-    
-    order_obj.order_lines = order_lines
+    # Contact for the order
+    contact = Contact(name=contact_name,
+                      email=contact_email,
+                      phone_number=contact_phone_number)
+    # contact.name = contact_name
+    # contact.email = contact_email
+    # contact.phone_number = contact_phone_number
 
-    order_dict = {
-        "orderReferenceNumber": ref_number,
-        "shippingAddress": {
-            "name": customer_name,
-            "address1": customer_shipping_address1,
-            "address2": customer_shipping_address2,
-            "zipCode": customer_zip_code,
-            "city": customer_city,
-            "state": customer_state,
-            "countryCode": country_code,
-        },
-        "contactInfo": {
-            "name": contact_name,
-            "email": contact_email,
-            "phoneNumber": contact_phone_number,
-        },
-    }
+    # Customer for the order
+    customer_address = Address(name=customer_name,
+                               address1=customer_shipping_address1,
+                               address2=customer_shipping_address2,
+                               zip_code=customer_zip_code,
+                               city=customer_city,
+                               state=customer_state,
+                               country_code=country_code)
+    # customer_address.name = customer_name
+    # customer_address.address1 = customer_shipping_address1
+    # customer_address.address2 = customer_shipping_address2
+    # customer_address.zip_code = customer_zip_code
+    # customer_address.city = customer_city
+    # customer_address.state = customer_state
+    # customer_address.country_code = country_code
+    order_obj = Order(order_reference_number=ref_number,
+                      contact_info=contact,
+                      shipping_address=customer_address,
+                      order_lines=order_lines)
+    # order_obj.order_reference_number = ref_number
+    # order_obj.contact_info = contact
+    # order_obj.shipping_address = customer_address
+    print(order_obj.to_str())
+    print(
+        "---CONFIRM THAT THE INFORMATION IS CORRECT BEFORE SUBMITTING THE ORDER.---"
+    )
+
+    if input("Submit the order? (y/n): ") == "y":
+        print("Submitting the order...")
+    else:
+        print("Cancelled - Order not submitted.")
 
 
 if __name__ == "__main__":
