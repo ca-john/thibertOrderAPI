@@ -9,32 +9,22 @@ Python 2.7 and 3.4+
 
 ## Installation & Usage
 
-### Setuptools
-
-Install via [Setuptools](http://pypi.python.org/pypi/setuptools).
+Install requirements.
 
 ```sh
-python setup.py install --user
-```
-(or `sudo python setup.py install` to install the package for all users)
-
-Then import the package:
-```python
-import swagger_client
+pip3 install -r requirements.txt
 ```
 
 ## Getting Started
+After installing the prerequisites, create a cred.py file with the required API key and base URL for the endpoints.
 
-Please follow the [installation procedure](#installation--usage) and then run the following:
-
-```python
-from __future__ import print_function
-import time
-import swagger_client
-from swagger_client.rest import ApiException
-from pprint import pprint
+Run the following to start the order.
 ```
+python thibert.py
+```
+Input the information into the CLI and wait for the submission.
 
+The tracking number and order creation date will be saved in a CSV file in the directory.
 ## Documentation for API Endpoints
 
 All URIs are relative to */*
@@ -88,4 +78,5 @@ Class | Method | HTTP request | Description
 
 
 ## Author
+Momin Naseem
 

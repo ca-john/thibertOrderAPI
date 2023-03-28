@@ -15,11 +15,18 @@ LOG_FILE: str = "order_log.csv"
 TIMEOUT = 500    # seconds
 
 ENDPOINT_DICT: Dict = {
-    "order": "/api/Order",
-    "tracking_number": "/api/Order/TrackingNumber",
-    "order_status": "/api/Order/OrderStatus",
-    "invoices": "/api/Order/Invoices",
-    "invoice_pdf": "/api/Order/InvoicePDF",
+    "order":
+        "/api/Order",
+    "tracking_number":
+        "/api/Order/TrackingNumber",
+    "order_status":
+        "/api/Order/OrderStatus",
+    "invoices":
+        "/api/Order/Invoices",
+    "invoice_pdf":
+        "/api/Order/InvoicePDF",
+    "vehicle_parts":
+        "/api/FitmentThibert/VehicleParts/{SearchType}/{VehicleYear}/{VehicleMake}/{VehicleModel}"
 }
 
 
@@ -759,6 +766,28 @@ class APIConnector:
                                 timeout=TIMEOUT)
         return response.json()
 
+    def post_data(self, endpoint: str, data: Dict) -> Any:
+        """Post data to the API.
+
+        Args:
+            endpoint (str): The endpoint.
+            data (Dict): Data to be posted.
+
+        Returns:
+            Any: The response data.
+        """
+        url = self.base_url + endpoint
+        headers = {
+            "x-api-key": self.api_key,
+            "Authorization": self.authorization,
+            "Content-Type": "application/json"
+        }
+        response = requests.post(url,
+                                 json=data,
+                                 headers=headers,
+                                 timeout=TIMEOUT)
+        return response.json()
+
 
 class CarLightingDistrictAPI(APIConnector):
     """The CarLightingDistrict API connector."""
@@ -796,8 +825,7 @@ class OrderAPI(APIConnector):
         """Create Fthe Order API connector with default HOST and KEY."""
         super().__init__()
 
-    def order(self, order: Dict[str, Union[str, Dict[str, Union[str,
-                                                                int]]]]) -> Any:
+    def order(self, order_obj: Order) -> Any:
         """Submit and order to the endpoint.
 
         Args:
@@ -865,7 +893,7 @@ class OrderAPI(APIConnector):
         """
         # Get the endpoint from the dictionary.
         endpoint = ENDPOINT_DICT["order"]
-        self.get_data(endpoint, params=order)
+        self.post_data(endpoint, data=json.dumps(order_obj.to_dict()))
 
         return ""
 
@@ -930,7 +958,10 @@ def write_order_log(order_number: str,
 
 
 def main():
-    """Start the main entry point of the app."""
+    """Start the main entry point of the app.
+    
+    This is where we get the input from the user and create the order and submit it.
+    """
     # api = CarLightingDistrictAPI()
 
     # # Example usage
@@ -1022,6 +1053,11 @@ def main():
     # order_obj.order_reference_number = ref_number
     # order_obj.contact_info = contact
     # order_obj.shipping_address = customer_address
+
+    order = OrderAPI()
+
+    #order.order(order_obj)
+
     print(order_obj.to_str())
     print(
         "---CONFIRM THAT THE INFORMATION IS CORRECT BEFORE SUBMITTING THE ORDER.---"
