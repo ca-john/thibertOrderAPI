@@ -1,11 +1,25 @@
+from __future__ import absolute_import
+
+import copy
 import csv
 import json
+import logging
+import multiprocessing
 import os
-import requests
-from datetime import datetime
-from typing import Any, Dict, List, Union
 import pprint
+import re
+import sys
+import tempfile
+from datetime import datetime
+from multiprocessing.pool import ThreadPool
+from typing import Any, Dict, List
+
+import requests
 import six
+import urllib3
+from urllib.parse import urlencode
+from six.moves import http_client as httplib
+
 import cred
 
 HOST: str = cred.HOST
@@ -28,6 +42,869 @@ ENDPOINT_DICT: Dict = {
     "vehicle_parts":
         "/api/FitmentThibert/VehicleParts/{SearchType}/{VehicleYear}/{VehicleMake}/{VehicleModel}"
 }
+
+
+
+
+
+
+class TypeWithDefault(type):
+    """Metaclass for creating a singleton class with a default instance."""
+
+    def __init__(cls, name, bases, dct):
+        """Run the constructor.
+
+        Args:
+            name (_type_): name of the class
+            bases (_type_): base classes
+            dct (_type_): dictionary of attributes
+        """
+        super(TypeWithDefault, cls).__init__(name, bases, dct)
+        cls._default = None
+
+    def __call__(cls):
+        """Return the default instance.
+        
+        Returns:
+            _type_: default instance
+        """
+        if cls._default is None:
+            cls._default = type.__call__(cls)
+        return copy.copy(cls._default)
+
+    def set_default(cls, default):
+        """Set default instance.
+
+        Args:
+            default (_type_): default instance
+        """
+        cls._default = copy.copy(default)
+
+
+class Configuration(six.with_metaclass(TypeWithDefault, object)):
+    """Do not edit the class manually."""
+
+    def __init__(self):
+        """Initialize the constructor."""
+        # Default Base url
+        self.host = "/"
+        # Temp file folder for downloading files
+        self.temp_folder_path = None
+
+        # Authentication Settings
+        # dict to store API key(s)
+        self.api_key = {}
+        # dict to store API prefix (e.g. Bearer)
+        self.api_key_prefix = {}
+        # function to refresh API key if expired
+        self.refresh_api_key_hook = None
+        # Username for HTTP basic authentication
+        self.username = ""
+        # Password for HTTP basic authentication
+        self.password = ""
+        # Logging Settings
+        self.logger = {}
+        self.logger["package_logger"] = logging.getLogger("swagger_client")
+        self.logger["urllib3_logger"] = logging.getLogger("urllib3")
+        # Log format
+        self.logger_format = '%(asctime)s %(levelname)s %(message)s'
+        # Log stream handler
+        self.logger_stream_handler = None
+        # Log file handler
+        self.logger_file_handler = None
+        # Debug file location
+        self.logger_file = None
+        # Debug switch
+        self.debug = False
+
+        # SSL/TLS verification
+        # Set this to false to skip verifying SSL certificate when calling API
+        # from https server.
+        self.verify_ssl = True
+        # Set this to customize the certificate file to verify the peer.
+        self.ssl_ca_cert = None
+        # client certificate file
+        self.cert_file = None
+        # client key file
+        self.key_file = None
+        # Set this to True/False to enable/disable SSL hostname verification.
+        self.assert_hostname = None
+
+        # urllib3 connection pool's maximum number of connections saved
+        # per pool. urllib3 uses 1 connection as default value, but this is
+        # not the best value when you are making a lot of possibly parallel
+        # requests to the same host, which is often the case here.
+        # cpu_count * 5 is used as default value to increase performance.
+        self.connection_pool_maxsize = multiprocessing.cpu_count() * 5
+
+        # Proxy URL
+        self.proxy = None
+        # Safe chars for path_param
+        self.safe_chars_for_path_param = ''
+
+    @property
+    def logger_file(self):
+        """The logger file.
+
+        If the logger_file is None, then add stream handler and remove file
+        handler. Otherwise, add file handler and remove stream handler.
+
+        :param value: The logger_file path.
+        :type: str
+        """
+        return self.__logger_file
+
+    @logger_file.setter
+    def logger_file(self, value):
+        """Set the logger file.
+
+        If the logger_file is None, then add stream handler and remove file
+        handler. Otherwise, add file handler and remove stream handler.
+
+        :param value: The logger_file path.
+        :type: str
+        """
+        self.__logger_file = value
+        if self.__logger_file:
+            # If set logging file,
+            # then add file handler and remove stream handler.
+            self.logger_file_handler = logging.FileHandler(self.__logger_file)
+            self.logger_file_handler.setFormatter(self.logger_formatter)
+            for _, logger in six.iteritems(self.logger):
+                logger.addHandler(self.logger_file_handler)
+                if self.logger_stream_handler:
+                    logger.removeHandler(self.logger_stream_handler)
+        else:
+            # If not set logging file,
+            # then add stream handler and remove file handler.
+            self.logger_stream_handler = logging.StreamHandler()
+            self.logger_stream_handler.setFormatter(self.logger_formatter)
+            for _, logger in six.iteritems(self.logger):
+                logger.addHandler(self.logger_stream_handler)
+                if self.logger_file_handler:
+                    logger.removeHandler(self.logger_file_handler)
+
+    @property
+    def debug(self):
+        """Debug status.
+
+        :param value: The debug status, True or False.
+        :type: bool
+        """
+        return self.__debug
+
+    @debug.setter
+    def debug(self, value):
+        """Debug status.
+
+        :param value: The debug status, True or False.
+        :type: bool
+        """
+        self.__debug = value
+        if self.__debug:
+            # if debug status is True, turn on debug logging
+            for _, logger in six.iteritems(self.logger):
+                logger.setLevel(logging.DEBUG)
+            # turn on httplib debug
+            httplib.HTTPConnection.debuglevel = 1
+        else:
+            # if debug status is False, turn off debug logging,
+            # setting log level to default `logging.WARNING`
+            for _, logger in six.iteritems(self.logger):
+                logger.setLevel(logging.WARNING)
+            # turn off httplib debug
+            httplib.HTTPConnection.debuglevel = 0
+
+    @property
+    def logger_format(self):
+        """The logger format.
+
+        The logger_formatter will be updated when sets logger_format.
+
+        :param value: The format string.
+        :type: str
+        """
+        return self.__logger_format
+
+    @logger_format.setter
+    def logger_format(self, value):
+        """Set the logger format.
+
+        The logger_formatter will be updated when sets logger_format.
+
+        :param value: The format string.
+        :type: str
+        """
+        self.__logger_format = value
+        self.logger_formatter = logging.Formatter(self.__logger_format)
+
+    def get_api_key_with_prefix(self, identifier):
+        """Get API key (with prefix if set).
+
+        :param identifier: The identifier of apiKey.
+        :return: The token for api key authentication.
+        """
+        if self.refresh_api_key_hook:
+            self.refresh_api_key_hook(self)
+
+        key = self.api_key.get(identifier)
+        if key:
+            prefix = self.api_key_prefix.get(identifier)
+            if prefix:
+                return "%s %s" % (prefix, key)
+            else:
+                return key
+
+    def get_basic_auth_token(self):
+        """Get HTTP basic authentication header (string).
+
+        :return: The token for basic HTTP authentication.
+        """
+        return urllib3.util.make_headers(
+            basic_auth=self.username + ':' + self.password
+        ).get('authorization')
+
+    def auth_settings(self):
+        """Get Auth Settings dict for api client.
+
+        :return: The Auth Settings information dict.
+        """
+        return {
+            'TAPI Key':
+                {
+                    'type': 'api_key',
+                    'in': 'header',
+                    'key': 'x-api-key',
+                    'value': self.get_api_key_with_prefix('x-api-key')
+                },
+        }
+
+    def to_debug_report(self):
+        """Get the essential information for debugging.
+
+        :return: The report for debugging.
+        """
+        return f"Python SDK Debug Report:\n OS: {sys.platform}\n Python Version: {sys.version}\n Version of the API: V1 DEVELOPMENT\n SDK Package Version: 1.0.0."
+
+
+
+
+
+
+
+class ApiClient(object):
+    """Generic API client.
+
+    DO NOT EDIT THIS CLASS
+
+    :param configuration: .Configuration object for this client
+    :param header_name: a header to pass when making calls to the API.
+    :param header_value: a header value to pass when making calls to
+        the API.
+    :param cookie: a cookie to include in the header when making calls
+        to the API
+    """
+
+    PRIMITIVE_TYPES = (float, bool, bytes, six.text_type) + six.integer_types
+    NATIVE_TYPES_MAPPING = {
+        'int': int,
+        'long': int if six.PY3 else long,  # noqa: F821
+        'float': float,
+        'str': str,
+        'bool': bool,
+        'date': datetime.date,
+        'datetime': datetime.datetime,
+        'object': object,
+    }
+
+    def __init__(self, configuration=None, header_name=None, header_value=None,
+                 cookie=None):
+        """ Initialize the ApiClient.
+
+        Args:
+            configuration (_type_, optional): Configuration for the API. Defaults to None.
+            header_name (_type_, optional): Header names. Defaults to None.
+            header_value (_type_, optional): Header values. Defaults to None.
+            cookie (_type_, optional): Cookie to use. Defaults to None.
+        """
+        if configuration is None:
+            configuration = Configuration()
+        self.configuration = configuration
+
+        self.pool = ThreadPool()
+        self.rest_client = rest.RESTClientObject(configuration)
+        self.default_headers = {}
+        if header_name is not None:
+            self.default_headers[header_name] = header_value
+        self.cookie = cookie
+        # Set default User-Agent.
+        self.user_agent = 'Swagger-Codegen/1.0.0/python'
+
+    def __del__(self):
+        self.pool.close()
+        self.pool.join()
+
+    @property
+    def user_agent(self):
+        """User agent for this API client."""
+        return self.default_headers['User-Agent']
+
+    @user_agent.setter
+    def user_agent(self, value):
+        self.default_headers['User-Agent'] = value
+
+    def set_default_header(self, header_name, header_value):
+        self.default_headers[header_name] = header_value
+
+    def __call_api(
+            self, resource_path, method, path_params=None,
+            query_params=None, header_params=None, body=None, post_params=None,
+            files=None, response_type=None, auth_settings=None,
+            _return_http_data_only=None, collection_formats=None,
+            _preload_content=True, _request_timeout=None):
+
+        config = self.configuration
+
+        # header parameters
+        header_params = header_params or {}
+        header_params.update(self.default_headers)
+        if self.cookie:
+            header_params['Cookie'] = self.cookie
+        if header_params:
+            header_params = self.sanitize_for_serialization(header_params)
+            header_params = dict(self.parameters_to_tuples(header_params,
+                                                           collection_formats))
+
+        # path parameters
+        if path_params:
+            path_params = self.sanitize_for_serialization(path_params)
+            path_params = self.parameters_to_tuples(path_params,
+                                                    collection_formats)
+            for k, v in path_params:
+                # specified safe chars, encode everything
+                resource_path = resource_path.replace(
+                    '{%s}' % k,
+                    quote(str(v), safe=config.safe_chars_for_path_param)
+                )
+
+        # query parameters
+        if query_params:
+            query_params = self.sanitize_for_serialization(query_params)
+            query_params = self.parameters_to_tuples(query_params,
+                                                     collection_formats)
+
+        # post parameters
+        if post_params or files:
+            post_params = self.prepare_post_parameters(post_params, files)
+            post_params = self.sanitize_for_serialization(post_params)
+            post_params = self.parameters_to_tuples(post_params,
+                                                    collection_formats)
+
+        # auth setting
+        self.update_params_for_auth(header_params, query_params, auth_settings)
+
+        # body
+        if body:
+            body = self.sanitize_for_serialization(body)
+
+        # request url
+        url = self.configuration.host + resource_path
+
+        # perform request and return response
+        response_data = self.request(
+            method, url, query_params=query_params, headers=header_params,
+            post_params=post_params, body=body,
+            _preload_content=_preload_content,
+            _request_timeout=_request_timeout)
+
+        self.last_response = response_data
+
+        return_data = response_data
+        if _preload_content:
+            # deserialize response data
+            if response_type:
+                return_data = self.deserialize(response_data, response_type)
+            else:
+                return_data = None
+
+        if _return_http_data_only:
+            return (return_data)
+        else:
+            return (return_data, response_data.status,
+                    response_data.getheaders())
+
+    def sanitize_for_serialization(self, obj):
+        """Builds a JSON POST object.
+
+        If obj is None, return None.
+        If obj is str, int, long, float, bool, return directly.
+        If obj is datetime.datetime, datetime.date
+            convert to string in iso8601 format.
+        If obj is list, sanitize each element in the list.
+        If obj is dict, return the dict.
+        If obj is swagger model, return the properties dict.
+
+        :param obj: The data to serialize.
+        :return: The serialized form of data.
+        """
+        if obj is None:
+            return None
+        elif isinstance(obj, self.PRIMITIVE_TYPES):
+            return obj
+        elif isinstance(obj, list):
+            return [self.sanitize_for_serialization(sub_obj)
+                    for sub_obj in obj]
+        elif isinstance(obj, tuple):
+            return tuple(self.sanitize_for_serialization(sub_obj)
+                         for sub_obj in obj)
+        elif isinstance(obj, (datetime.datetime, datetime.date)):
+            return obj.isoformat()
+
+        if isinstance(obj, dict):
+            obj_dict = obj
+        else:
+            # Convert model obj to dict except
+            # attributes `swagger_types`, `attribute_map`
+            # and attributes which value is not None.
+            # Convert attribute name to json key in
+            # model definition for request.
+            obj_dict = {obj.attribute_map[attr]: getattr(obj, attr)
+                        for attr, _ in six.iteritems(obj.swagger_types)
+                        if getattr(obj, attr) is not None}
+
+        return {key: self.sanitize_for_serialization(val)
+                for key, val in six.iteritems(obj_dict)}
+
+    def deserialize(self, response, response_type):
+        """Deserializes response into an object.
+
+        :param response: RESTResponse object to be deserialized.
+        :param response_type: class literal for
+            deserialized object, or string of class name.
+
+        :return: deserialized object.
+        """
+        # handle file downloading
+        # save response body into a tmp file and return the instance
+        if response_type == "file":
+            return self.__deserialize_file(response)
+
+        # fetch data from response object
+        try:
+            data = json.loads(response.data)
+        except ValueError:
+            data = response.data
+
+        return self.__deserialize(data, response_type)
+
+    def __deserialize(self, data, klass):
+        """Deserializes dict, list, str into an object.
+
+        :param data: dict, list or str.
+        :param klass: class literal, or string of class name.
+
+        :return: object.
+        """
+        if data is None:
+            return None
+
+        if type(klass) == str:
+            if klass.startswith('list['):
+                sub_kls = re.match(r'list\[(.*)\]', klass).group(1)
+                return [self.__deserialize(sub_data, sub_kls)
+                        for sub_data in data]
+
+            if klass.startswith('dict('):
+                sub_kls = re.match(r'dict\(([^,]*), (.*)\)', klass).group(2)
+                return {k: self.__deserialize(v, sub_kls)
+                        for k, v in six.iteritems(data)}
+
+            # convert str to class
+            if klass in self.NATIVE_TYPES_MAPPING:
+                klass = self.NATIVE_TYPES_MAPPING[klass]
+            else:
+                klass = getattr(swagger_client.models, klass)
+
+        if klass in self.PRIMITIVE_TYPES:
+            return self.__deserialize_primitive(data, klass)
+        elif klass == object:
+            return self.__deserialize_object(data)
+        elif klass == datetime.date:
+            return self.__deserialize_date(data)
+        elif klass == datetime.datetime:
+            return self.__deserialize_datatime(data)
+        else:
+            return self.__deserialize_model(data, klass)
+
+    def call_api(self, resource_path, method,
+                 path_params=None, query_params=None, header_params=None,
+                 body=None, post_params=None, files=None,
+                 response_type=None, auth_settings=None, async_req=None,
+                 _return_http_data_only=None, collection_formats=None,
+                 _preload_content=True, _request_timeout=None):
+        """Makes the HTTP request (synchronous) and returns deserialized data.
+
+        To make an async request, set the async_req parameter.
+
+        :param resource_path: Path to method endpoint.
+        :param method: Method to call.
+        :param path_params: Path parameters in the url.
+        :param query_params: Query parameters in the url.
+        :param header_params: Header parameters to be
+            placed in the request header.
+        :param body: Request body.
+        :param post_params dict: Request post form parameters,
+            for `application/x-www-form-urlencoded`, `multipart/form-data`.
+        :param auth_settings list: Auth Settings names for the request.
+        :param response: Response data type.
+        :param files dict: key -> filename, value -> filepath,
+            for `multipart/form-data`.
+        :param async_req bool: execute request asynchronously
+        :param _return_http_data_only: response data without head status code
+                                       and headers
+        :param collection_formats: dict of collection formats for path, query,
+            header, and post parameters.
+        :param _preload_content: if False, the urllib3.HTTPResponse object will
+                                 be returned without reading/decoding response
+                                 data. Default is True.
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :return:
+            If async_req parameter is True,
+            the request will be called asynchronously.
+            The method will return the request thread.
+            If parameter async_req is False or missing,
+            then the method will return the response directly.
+        """
+        if not async_req:
+            return self.__call_api(resource_path, method,
+                                   path_params, query_params, header_params,
+                                   body, post_params, files,
+                                   response_type, auth_settings,
+                                   _return_http_data_only, collection_formats,
+                                   _preload_content, _request_timeout)
+        else:
+            thread = self.pool.apply_async(self.__call_api, (resource_path,
+                                           method, path_params, query_params,
+                                           header_params, body,
+                                           post_params, files,
+                                           response_type, auth_settings,
+                                           _return_http_data_only,
+                                           collection_formats,
+                                           _preload_content, _request_timeout))
+        return thread
+
+    def request(self, method, url, query_params=None, headers=None,
+                post_params=None, body=None, _preload_content=True,
+                _request_timeout=None):
+        """Makes the HTTP request using RESTClient."""
+        if method == "GET":
+            return self.rest_client.GET(url,
+                                        query_params=query_params,
+                                        _preload_content=_preload_content,
+                                        _request_timeout=_request_timeout,
+                                        headers=headers)
+        elif method == "HEAD":
+            return self.rest_client.HEAD(url,
+                                         query_params=query_params,
+                                         _preload_content=_preload_content,
+                                         _request_timeout=_request_timeout,
+                                         headers=headers)
+        elif method == "OPTIONS":
+            return self.rest_client.OPTIONS(url,
+                                            query_params=query_params,
+                                            headers=headers,
+                                            post_params=post_params,
+                                            _preload_content=_preload_content,
+                                            _request_timeout=_request_timeout,
+                                            body=body)
+        elif method == "POST":
+            return self.rest_client.POST(url,
+                                         query_params=query_params,
+                                         headers=headers,
+                                         post_params=post_params,
+                                         _preload_content=_preload_content,
+                                         _request_timeout=_request_timeout,
+                                         body=body)
+        elif method == "PUT":
+            return self.rest_client.PUT(url,
+                                        query_params=query_params,
+                                        headers=headers,
+                                        post_params=post_params,
+                                        _preload_content=_preload_content,
+                                        _request_timeout=_request_timeout,
+                                        body=body)
+        elif method == "PATCH":
+            return self.rest_client.PATCH(url,
+                                          query_params=query_params,
+                                          headers=headers,
+                                          post_params=post_params,
+                                          _preload_content=_preload_content,
+                                          _request_timeout=_request_timeout,
+                                          body=body)
+        elif method == "DELETE":
+            return self.rest_client.DELETE(url,
+                                           query_params=query_params,
+                                           headers=headers,
+                                           _preload_content=_preload_content,
+                                           _request_timeout=_request_timeout,
+                                           body=body)
+        else:
+            raise ValueError(
+                "http method must be `GET`, `HEAD`, `OPTIONS`,"
+                " `POST`, `PATCH`, `PUT` or `DELETE`."
+            )
+
+    def parameters_to_tuples(self, params, collection_formats):
+        """Get parameters as list of tuples, formatting collections.
+
+        :param params: Parameters as dict or list of two-tuples
+        :param dict collection_formats: Parameter collection formats
+        :return: Parameters as list of tuples, collections formatted
+        """
+        new_params = []
+        if collection_formats is None:
+            collection_formats = {}
+        for k, v in six.iteritems(params) if isinstance(params, dict) else params:  # noqa: E501
+            if k in collection_formats:
+                collection_format = collection_formats[k]
+                if collection_format == 'multi':
+                    new_params.extend((k, value) for value in v)
+                else:
+                    if collection_format == 'ssv':
+                        delimiter = ' '
+                    elif collection_format == 'tsv':
+                        delimiter = '\t'
+                    elif collection_format == 'pipes':
+                        delimiter = '|'
+                    else:  # csv is the default
+                        delimiter = ','
+                    new_params.append(
+                        (k, delimiter.join(str(value) for value in v)))
+            else:
+                new_params.append((k, v))
+        return new_params
+
+    def prepare_post_parameters(self, post_params=None, files=None):
+        """Builds form parameters.
+
+        :param post_params: Normal form parameters.
+        :param files: File parameters.
+        :return: Form parameters with files.
+        """
+        params = []
+
+        if post_params:
+            params = post_params
+
+        if files:
+            for k, v in six.iteritems(files):
+                if not v:
+                    continue
+                file_names = v if type(v) is list else [v]
+                for n in file_names:
+                    with open(n, 'rb') as f:
+                        filename = os.path.basename(f.name)
+                        filedata = f.read()
+                        mimetype = (mimetypes.guess_type(filename)[0] or
+                                    'application/octet-stream')
+                        params.append(
+                            tuple([k, tuple([filename, filedata, mimetype])]))
+
+        return params
+
+    def select_header_accept(self, accepts):
+        """Returns `Accept` based on an array of accepts provided.
+
+        :param accepts: List of headers.
+        :return: Accept (e.g. application/json).
+        """
+        if not accepts:
+            return
+
+        accepts = [x.lower() for x in accepts]
+
+        if 'application/json' in accepts:
+            return 'application/json'
+        else:
+            return ', '.join(accepts)
+
+    def select_header_content_type(self, content_types):
+        """Return `Content-Type` based on an array of content_types provided.
+
+        :param content_types: List of content-types.
+        :return: Content-Type (e.g. application/json).
+        """
+        if not content_types:
+            return 'application/json'
+
+        content_types = [x.lower() for x in content_types]
+
+        if 'application/json' in content_types or '*/*' in content_types:
+            return 'application/json'
+        else:
+            return content_types[0]
+
+    def update_params_for_auth(self, headers, querys, auth_settings):
+        """Update header and query params based on authentication setting.
+
+        :param headers: Header parameters dict to be updated.
+        :param querys: Query parameters tuple list to be updated.
+        :param auth_settings: Authentication setting identifiers list.
+        """
+        if not auth_settings:
+            return
+
+        for auth in auth_settings:
+            auth_setting = self.configuration.auth_settings().get(auth)
+            if auth_setting:
+                if not auth_setting['value']:
+                    continue
+                elif auth_setting['in'] == 'header':
+                    headers[auth_setting['key']] = auth_setting['value']
+                elif auth_setting['in'] == 'query':
+                    querys.append((auth_setting['key'], auth_setting['value']))
+                else:
+                    raise ValueError(
+                        'Authentication token must be in `query` or `header`'
+                    )
+
+    def __deserialize_file(self, response):
+        """Deserialize body to file.
+
+        Saves response body into a file in a temporary folder,
+        using the filename from the `Content-Disposition` header if provided.
+
+        :param response:  RESTResponse.
+        :return: file path.
+        """
+        fd, path = tempfile.mkstemp(dir=self.configuration.temp_folder_path)
+        os.close(fd)
+        os.remove(path)
+
+        content_disposition = response.getheader("Content-Disposition")
+        if content_disposition:
+            filename = re.search(r'filename=[\'"]?([^\'"\s]+)[\'"]?',
+                                 content_disposition).group(1)
+            path = os.path.join(os.path.dirname(path), filename)
+            response_data = response.data
+            with open(path, "wb") as f:
+                if isinstance(response_data, str):
+                    # change str to bytes so we can write it
+                    response_data = response_data.encode('utf-8')
+                    f.write(response_data)
+                else:
+                    f.write(response_data)
+        return path
+
+    def __deserialize_primitive(self, data, klass):
+        """Deserialize string to primitive type.
+
+        :param data: str.
+        :param klass: class literal.
+
+        :return: int, long, float, str, bool.
+        """
+        try:
+            return klass(data)
+        except UnicodeEncodeError:
+            return six.text_type(data)
+        except TypeError:
+            return data
+
+    def __deserialize_object(self, value):
+        """Return a original value.
+
+        :return: object.
+        """
+        return value
+
+    def __deserialize_date(self, string):
+        """Deserialize string to date.
+
+        :param string: str.
+        :return: date.
+        """
+        try:
+            from dateutil.parser import parse
+            return parse(string).date()
+        except ImportError:
+            return string
+        except ValueError:
+            raise rest.ApiException(
+                status=0,
+                reason="Failed to parse `{0}` as date object".format(string)
+            )
+
+    def __deserialize_datatime(self, string):
+        """Deserialize string to datetime.
+
+        The string should be in iso8601 datetime format.
+
+        :param string: str.
+        :return: datetime.
+        """
+        try:
+            from dateutil.parser import parse
+            return parse(string)
+        except ImportError:
+            return string
+        except ValueError:
+            raise rest.ApiException(
+                status=0,
+                reason=(
+                    "Failed to parse `{0}` as datetime object"
+                    .format(string)
+                )
+            )
+
+    def __hasattr(self, object, name):
+            return name in object.__class__.__dict__
+
+    def __deserialize_model(self, data, klass):
+        """Deserialize list or dict to model.
+
+        :param data: dict, list.
+        :param klass: class literal.
+        :return: model object.
+        """
+        if not klass.swagger_types and not self.__hasattr(klass, 'get_real_child_model'):
+            return data
+
+        kwargs = {}
+        if klass.swagger_types is not None:
+            for attr, attr_type in six.iteritems(klass.swagger_types):
+                if (data is not None and
+                        klass.attribute_map[attr] in data and
+                        isinstance(data, (list, dict))):
+                    value = data[klass.attribute_map[attr]]
+                    kwargs[attr] = self.__deserialize(value, attr_type)
+
+        instance = klass(**kwargs)
+
+        if (isinstance(instance, dict) and
+                klass.swagger_types is not None and
+                isinstance(data, dict)):
+            for key, value in data.items():
+                if key not in klass.swagger_types:
+                    instance[key] = value
+        if self.__hasattr(instance, 'get_real_child_model'):
+            klass_name = instance.get_real_child_model(data)
+            if klass_name:
+                instance = self.__deserialize(data, klass_name)
+        return instance
+
+
+
+
+
+
+
+
+
+
 
 
 class Contact(object):
@@ -789,130 +1666,9 @@ class APIConnector:
         return response.json()
 
 
-class CarLightingDistrictAPI(APIConnector):
-    """The CarLightingDistrict API connector."""
-
-    def __init__(self):
-        """Create the CarLightingDistrict API connector."""
-        super().__init__()
-
-    def get_vehicle_years(self) -> Any:
-        """Get a list of vehicle years.
-
-        Returns:
-            Any: Returns a list of vehicle years.
-        """
-        endpoint = "/api/CarLightingDistrict/Vehicle/Years"
-        return self.get_data(endpoint)
-
-    def get_vehicle_makes(self, vehicle_year: int) -> Any:
-        """Get a list of vehicle makes for a given year."""
-        endpoint = f"/api/CarLightingDistrict/Vehicle/Makes/{vehicle_year}"
-        return self.get_data(endpoint)
-
-    def get_vehicle_models(self, vehicle_year: int, vehicle_make: str) -> Any:
-        """Get a list of vehicle models for a given year and make."""
-        endpoint = (
-            f"/api/CarLightingDistrict/Vehicle/Models/{vehicle_year}/{vehicle_make}"
-        )
-        return self.get_data(endpoint)
-
-
-# class OrderAPI(APIConnector):
-#     """The Order API connector."""
-
-#     def __init__(self):
-#         """Create Fthe Order API connector with default HOST and KEY."""
-#         super().__init__()
-
-#     def order(self, order_obj: Order) -> Any:
-#         """Submit and order to the endpoint.
-
-#         Args:
-#             order (Dict): The order data. The schema is as follows
-
-#             Canadian Orders:
-#             {
-#                             "orderReferenceNumber": "123456",
-#                             "shippingAddress": {
-#                                 "name": "Jean Hachette",
-#                                 "address1": "200, Blvd St-Jean-Baptiste",
-#                                 "address2": "",
-#                                 "zipCode": "J6R 2L2",
-#                                 "city": "Mercier",
-#                                 "state": "QC",
-#                                 "countryCode": "CA"
-#                             },
-#                             "contactInfo": {
-#                                 "name": "Jean Hachette",
-#                                 "email": "noreply@rthibert.com",
-#                                 "phoneNumber": "5149999999"
-#                             },
-#                             "orderLines": [
-#                                 {
-#                                 "thibertPartNumber": "081001",
-#                                 "quantity": 4
-#                                 },
-#                                 {
-#                                 "thibertPartNumber": "WT4710121",
-#                                 "quantity": 1
-#                                 }
-#                             ]
-#             }
-
-#             US Orders:
-#             {
-#                                 "orderReferenceNumber": "123456",
-#                                 "shippingAddress": {
-#                                         "name": "Bob Builder",
-#                                         "address1": "90 Trade Zone Court",
-#                                         "address2": "",
-#                                         "zipCode": "11779",
-#                                         "city": "Ronkonkoma",
-#                                         "state": "NY",
-#                                         "countryCode": "US"
-#                                 },
-#                                 "contactInfo": {
-#                                         "name": "Bob Builder",
-#                                         "email": "noreply@rthibert.com",
-#                                         "phoneNumber": "+1 619-999-9999"
-#                                 },
-#                                 "orderLines": [
-#                                         {
-#                                         "thibertPartNumber": "081001",
-#                                         "quantity": 4
-#                                         },
-#                                         {
-#                                         "thibertPartNumber": "WT4710121",
-#                                         "quantity": 1
-#                                         }
-#                                 ]
-#             }
-#         Returns:
-#             Any: The response data.
-#         """
-#         # Get the endpoint from the dictionary.
-#         endpoint = ENDPOINT_DICT["order"]
-#         self.post_data(endpoint, data=json.dumps(order_obj.to_dict()))
-
-#         return ""
-
-#     def tracking_number(self, tracking_number: str) -> Any:
-#         """Get the tracking information for a given tracking number.
-
-#         Args:
-#             tracking_number (str): The tracking number.
-#         Returns:
-#             Any: The response data.
-#         """
-#         # Get the endpoint from the dictionary.
-#         endpoint = ENDPOINT_DICT["tracking_number"]
-#         return self.get_data(endpoint, params=tracking_number)
-
 
 class OrderApi(object):
-    """DO NOT EDIT THIS CLASS
-    """
+    """DO NOT EDIT THIS CLASS."""
 
     def __init__(self, api_client=None):
         if api_client is None:
@@ -920,7 +1676,7 @@ class OrderApi(object):
         self.api_client = api_client
 
     def api_order_invoice_pdf_get(self, **kwargs):    # noqa: E501
-        """Download a base64 string representation of an invoice PDF. The response must be parsed into a PDF on the caller's side.  # noqa: E501
+        """Download a base64 string representation of an invoice PDF. The response must be parsed into a PDF on the caller's side.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
@@ -945,7 +1701,7 @@ class OrderApi(object):
 
     def api_order_invoice_pdf_get_with_http_info(self,
                                                  **kwargs):    # noqa: E501
-        """Download a base64 string representation of an invoice PDF. The response must be parsed into a PDF on the caller's side.  # noqa: E501
+        """Download a base64 string representation of an invoice PDF. The response must be parsed into a PDF on the caller's side.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
@@ -959,7 +1715,6 @@ class OrderApi(object):
                  If the method is called asynchronously,
                  returns the request thread.
         """
-
         all_params = ['invoice_id', 'original_order_id']    # noqa: E501
         all_params.append('async_req')
         all_params.append('_return_http_data_only')
@@ -969,8 +1724,8 @@ class OrderApi(object):
         params = locals()
         for key, val in six.iteritems(params['kwargs']):
             if key not in all_params:
-                raise TypeError("Got an unexpected keyword argument '%s'"
-                                " to method api_order_invoice_pdf_get" % key)
+                raise TypeError(f"Got an unexpected keyword argument {key}"
+                                " to method api_order_invoice_pdf_get")
             params[key] = val
         del params['kwargs']
 
@@ -1017,7 +1772,7 @@ class OrderApi(object):
             collection_formats=collection_formats)
 
     def api_order_invoices_get(self, **kwargs):    # noqa: E501
-        """Retrieves invoices associated to the account in pages of 10.  # noqa: E501
+        """Retrieve invoices associated to the account in pages of 10.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
@@ -1042,7 +1797,7 @@ class OrderApi(object):
             return data
 
     def api_order_invoices_get_with_http_info(self, **kwargs):    # noqa: E501
-        """Retrieves invoices associated to the account in pages of 10.  # noqa: E501
+        """Retrieve invoices associated to the account in pages of 10.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
@@ -1057,7 +1812,6 @@ class OrderApi(object):
                  If the method is called asynchronously,
                  returns the request thread.
         """
-
         all_params = ['start_date', 'end_date', 'page']    # noqa: E501
         all_params.append('async_req')
         all_params.append('_return_http_data_only')
