@@ -818,96 +818,609 @@ class CarLightingDistrictAPI(APIConnector):
         return self.get_data(endpoint)
 
 
-class OrderAPI(APIConnector):
-    """The Order API connector."""
+# class OrderAPI(APIConnector):
+#     """The Order API connector."""
 
-    def __init__(self):
-        """Create Fthe Order API connector with default HOST and KEY."""
-        super().__init__()
+#     def __init__(self):
+#         """Create Fthe Order API connector with default HOST and KEY."""
+#         super().__init__()
 
-    def order(self, order_obj: Order) -> Any:
-        """Submit and order to the endpoint.
+#     def order(self, order_obj: Order) -> Any:
+#         """Submit and order to the endpoint.
 
-        Args:
-            order (Dict): The order data. The schema is as follows
+#         Args:
+#             order (Dict): The order data. The schema is as follows
 
-            Canadian Orders:
-            {
-                            "orderReferenceNumber": "123456",
-                            "shippingAddress": {
-                                "name": "Jean Hachette",
-                                "address1": "200, Blvd St-Jean-Baptiste",
-                                "address2": "",
-                                "zipCode": "J6R 2L2",
-                                "city": "Mercier",
-                                "state": "QC",
-                                "countryCode": "CA"
-                            },
-                            "contactInfo": {
-                                "name": "Jean Hachette",
-                                "email": "noreply@rthibert.com",
-                                "phoneNumber": "5149999999"
-                            },
-                            "orderLines": [
-                                {
-                                "thibertPartNumber": "081001",
-                                "quantity": 4
-                                },
-                                {
-                                "thibertPartNumber": "WT4710121",
-                                "quantity": 1
-                                }
-                            ]
-            }
+#             Canadian Orders:
+#             {
+#                             "orderReferenceNumber": "123456",
+#                             "shippingAddress": {
+#                                 "name": "Jean Hachette",
+#                                 "address1": "200, Blvd St-Jean-Baptiste",
+#                                 "address2": "",
+#                                 "zipCode": "J6R 2L2",
+#                                 "city": "Mercier",
+#                                 "state": "QC",
+#                                 "countryCode": "CA"
+#                             },
+#                             "contactInfo": {
+#                                 "name": "Jean Hachette",
+#                                 "email": "noreply@rthibert.com",
+#                                 "phoneNumber": "5149999999"
+#                             },
+#                             "orderLines": [
+#                                 {
+#                                 "thibertPartNumber": "081001",
+#                                 "quantity": 4
+#                                 },
+#                                 {
+#                                 "thibertPartNumber": "WT4710121",
+#                                 "quantity": 1
+#                                 }
+#                             ]
+#             }
 
-            US Orders:
-            {
-                                "orderReferenceNumber": "123456",
-                                "shippingAddress": {
-                                        "name": "Bob Builder",
-                                        "address1": "90 Trade Zone Court",
-                                        "address2": "",
-                                        "zipCode": "11779",
-                                        "city": "Ronkonkoma",
-                                        "state": "NY",
-                                        "countryCode": "US"
-                                },
-                                "contactInfo": {
-                                        "name": "Bob Builder",
-                                        "email": "noreply@rthibert.com",
-                                        "phoneNumber": "+1 619-999-9999"
-                                },
-                                "orderLines": [
-                                        {
-                                        "thibertPartNumber": "081001",
-                                        "quantity": 4
-                                        },
-                                        {
-                                        "thibertPartNumber": "WT4710121",
-                                        "quantity": 1
-                                        }
-                                ]
-            }
-        Returns:
-            Any: The response data.
+#             US Orders:
+#             {
+#                                 "orderReferenceNumber": "123456",
+#                                 "shippingAddress": {
+#                                         "name": "Bob Builder",
+#                                         "address1": "90 Trade Zone Court",
+#                                         "address2": "",
+#                                         "zipCode": "11779",
+#                                         "city": "Ronkonkoma",
+#                                         "state": "NY",
+#                                         "countryCode": "US"
+#                                 },
+#                                 "contactInfo": {
+#                                         "name": "Bob Builder",
+#                                         "email": "noreply@rthibert.com",
+#                                         "phoneNumber": "+1 619-999-9999"
+#                                 },
+#                                 "orderLines": [
+#                                         {
+#                                         "thibertPartNumber": "081001",
+#                                         "quantity": 4
+#                                         },
+#                                         {
+#                                         "thibertPartNumber": "WT4710121",
+#                                         "quantity": 1
+#                                         }
+#                                 ]
+#             }
+#         Returns:
+#             Any: The response data.
+#         """
+#         # Get the endpoint from the dictionary.
+#         endpoint = ENDPOINT_DICT["order"]
+#         self.post_data(endpoint, data=json.dumps(order_obj.to_dict()))
+
+#         return ""
+
+#     def tracking_number(self, tracking_number: str) -> Any:
+#         """Get the tracking information for a given tracking number.
+
+#         Args:
+#             tracking_number (str): The tracking number.
+#         Returns:
+#             Any: The response data.
+#         """
+#         # Get the endpoint from the dictionary.
+#         endpoint = ENDPOINT_DICT["tracking_number"]
+#         return self.get_data(endpoint, params=tracking_number)
+
+
+class OrderApi(object):
+    """DO NOT EDIT THIS CLASS
+    """
+
+    def __init__(self, api_client=None):
+        if api_client is None:
+            api_client = ApiClient()
+        self.api_client = api_client
+
+    def api_order_invoice_pdf_get(self, **kwargs):    # noqa: E501
+        """Download a base64 string representation of an invoice PDF. The response must be parsed into a PDF on the caller's side.  # noqa: E501
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.api_order_invoice_pdf_get(async_req=True)
+        >>> result = thread.get()
+
+        :param async_req bool
+        :param str invoice_id: Invoice number
+        :param str original_order_id: Order number related to the specified invoice
+        :return: str
+                 If the method is called asynchronously,
+                 returns the request thread.
         """
-        # Get the endpoint from the dictionary.
-        endpoint = ENDPOINT_DICT["order"]
-        self.post_data(endpoint, data=json.dumps(order_obj.to_dict()))
+        kwargs['_return_http_data_only'] = True
+        if kwargs.get('async_req'):
+            return self.api_order_invoice_pdf_get_with_http_info(
+                **kwargs)    # noqa: E501
+        else:
+            (data) = self.api_order_invoice_pdf_get_with_http_info(
+                **kwargs)    # noqa: E501
+            return data
 
-        return ""
+    def api_order_invoice_pdf_get_with_http_info(self,
+                                                 **kwargs):    # noqa: E501
+        """Download a base64 string representation of an invoice PDF. The response must be parsed into a PDF on the caller's side.  # noqa: E501
 
-    def tracking_number(self, tracking_number: str) -> Any:
-        """Get the tracking information for a given tracking number.
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.api_order_invoice_pdf_get_with_http_info(async_req=True)
+        >>> result = thread.get()
 
-        Args:
-            tracking_number (str): The tracking number.
-        Returns:
-            Any: The response data.
+        :param async_req bool
+        :param str invoice_id: Invoice number
+        :param str original_order_id: Order number related to the specified invoice
+        :return: str
+                 If the method is called asynchronously,
+                 returns the request thread.
         """
-        # Get the endpoint from the dictionary.
-        endpoint = ENDPOINT_DICT["tracking_number"]
-        return self.get_data(endpoint, params=tracking_number)
+
+        all_params = ['invoice_id', 'original_order_id']    # noqa: E501
+        all_params.append('async_req')
+        all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError("Got an unexpected keyword argument '%s'"
+                                " to method api_order_invoice_pdf_get" % key)
+            params[key] = val
+        del params['kwargs']
+
+        collection_formats = {}
+
+        path_params = {}
+
+        query_params = []
+        if 'invoice_id' in params:
+            query_params.append(
+                ('invoiceId', params['invoice_id']))    # noqa: E501
+        if 'original_order_id' in params:
+            query_params.append(('originalOrderId',
+                                 params['original_order_id']))    # noqa: E501
+
+        header_params = {}
+
+        form_params = []
+        local_var_files = {}
+
+        body_params = None
+        # HTTP header `Accept`
+        header_params['Accept'] = self.api_client.select_header_accept(
+            ['text/plain', 'application/json', 'text/json'])    # noqa: E501
+
+        # Authentication setting
+        auth_settings = ['TAPI Key']    # noqa: E501
+
+        return self.api_client.call_api(
+            '/api/Order/InvoicePDF',
+            'GET',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type='str',    # noqa: E501
+            auth_settings=auth_settings,
+            async_req=params.get('async_req'),
+            _return_http_data_only=params.get('_return_http_data_only'),
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
+
+    def api_order_invoices_get(self, **kwargs):    # noqa: E501
+        """Retrieves invoices associated to the account in pages of 10.  # noqa: E501
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.api_order_invoices_get(async_req=True)
+        >>> result = thread.get()
+
+        :param async_req bool
+        :param datetime start_date: Filter invoices by start date
+        :param datetime end_date: Filter invoices by end date
+        :param int page: Page to retrieve
+        :return: list[Invoice]
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+        kwargs['_return_http_data_only'] = True
+        if kwargs.get('async_req'):
+            return self.api_order_invoices_get_with_http_info(
+                **kwargs)    # noqa: E501
+        else:
+            (data) = self.api_order_invoices_get_with_http_info(
+                **kwargs)    # noqa: E501
+            return data
+
+    def api_order_invoices_get_with_http_info(self, **kwargs):    # noqa: E501
+        """Retrieves invoices associated to the account in pages of 10.  # noqa: E501
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.api_order_invoices_get_with_http_info(async_req=True)
+        >>> result = thread.get()
+
+        :param async_req bool
+        :param datetime start_date: Filter invoices by start date
+        :param datetime end_date: Filter invoices by end date
+        :param int page: Page to retrieve
+        :return: list[Invoice]
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+
+        all_params = ['start_date', 'end_date', 'page']    # noqa: E501
+        all_params.append('async_req')
+        all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError(f"Got an unexpected keyword argument {key}"
+                                " to method api_order_invoices_get")
+            params[key] = val
+        del params['kwargs']
+
+        collection_formats = {}
+
+        path_params = {}
+
+        query_params = []
+        if 'start_date' in params:
+            query_params.append(
+                ('startDate', params['start_date']))    # noqa: E501
+        if 'end_date' in params:
+            query_params.append(('endDate', params['end_date']))    # noqa: E501
+        if 'page' in params:
+            query_params.append(('page', params['page']))    # noqa: E501
+
+        header_params = {}
+
+        form_params = []
+        local_var_files = {}
+
+        body_params = None
+        # HTTP header `Accept`
+        header_params['Accept'] = self.api_client.select_header_accept(
+            ['text/plain', 'application/json', 'text/json'])    # noqa: E501
+
+        # Authentication setting
+        auth_settings = ['TAPI Key']    # noqa: E501
+
+        return self.api_client.call_api(
+            '/api/Order/Invoices',
+            'GET',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type='list[Invoice]',    # noqa: E501
+            auth_settings=auth_settings,
+            async_req=params.get('async_req'),
+            _return_http_data_only=params.get('_return_http_data_only'),
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
+
+    def api_order_order_status_post(self, **kwargs):    # noqa: E501
+        """Retrieve the order status associated with the specified order numbers. If there is no order number specified, all orders will be returned.
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.api_order_order_status_post(async_req=True)
+        >>> result = thread.get()
+
+        :param async_req bool
+        :param list[str] body: List of order numbers base on the OrderType
+        :param int order_number_type: Type of order number used for the search. Values: 1 (ThibertOrderNumber), 2 (OrderReferenceNumber/WebOrderReference)
+        :param int page_number: Number of the page to retrieve. Default value: 1
+        :param int page_size: Number of results per page. Default value: 50, Maximum allowed: 200
+        :return: list[OrderStatus]
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+        kwargs['_return_http_data_only'] = True
+        if kwargs.get('async_req'):
+            return self.api_order_order_status_post_with_http_info(
+                **kwargs)    # noqa: E501
+        else:
+            (data) = self.api_order_order_status_post_with_http_info(
+                **kwargs)    # noqa: E501
+            return data
+
+    def api_order_order_status_post_with_http_info(self,
+                                                   **kwargs):    # noqa: E501
+        """Retrieve the order status associated with the specified order numbers. If there is no order number specified, all orders will be returned.
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.api_order_order_status_post_with_http_info(async_req=True)
+        >>> result = thread.get()
+
+        :param async_req bool
+        :param list[str] body: List of order numbers base on the OrderType
+        :param int order_number_type: Type of order number used for the search. Values: 1 (ThibertOrderNumber), 2 (OrderReferenceNumber/WebOrderReference)
+        :param int page_number: Number of the page to retrieve. Default value: 1
+        :param int page_size: Number of results per page. Default value: 50, Maximum allowed: 200
+        :return: list[OrderStatus]
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+        all_params = ['body', 'order_number_type', 'page_number',
+                      'page_size']    # noqa: E501
+        all_params.append('async_req')
+        all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError(f"Got an unexpected keyword argument {key}"
+                                " to method api_order_order_status_post")
+            params[key] = val
+        del params['kwargs']
+
+        collection_formats = {}
+
+        path_params = {}
+
+        query_params = []
+        if 'order_number_type' in params:
+            query_params.append(('OrderNumberType',
+                                 params['order_number_type']))    # noqa: E501
+        if 'page_number' in params:
+            query_params.append(
+                ('PageNumber', params['page_number']))    # noqa: E501
+        if 'page_size' in params:
+            query_params.append(
+                ('PageSize', params['page_size']))    # noqa: E501
+
+        header_params = {}
+
+        form_params = []
+        local_var_files = {}
+
+        body_params = None
+        if 'body' in params:
+            body_params = params['body']
+        # HTTP header `Accept`
+        header_params['Accept'] = self.api_client.select_header_accept(
+            ['text/plain', 'application/json', 'text/json'])    # noqa: E501
+
+        # HTTP header `Content-Type`
+        header_params[
+            'Content-Type'] = self.api_client.select_header_content_type(    # noqa: E501
+                ['application/json', 'text/json',
+                 'application/*+json'])    # noqa: E501
+
+        # Authentication setting
+        auth_settings = ['TAPI Key']    # noqa: E501
+
+        return self.api_client.call_api(
+            '/api/Order/OrderStatus',
+            'POST',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type='list[OrderStatus]',    # noqa: E501
+            auth_settings=auth_settings,
+            async_req=params.get('async_req'),
+            _return_http_data_only=params.get('_return_http_data_only'),
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
+
+    def api_order_post(self, **kwargs):    # noqa: E501
+        """Process an order in our systems.
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.api_order_post(async_req=True)
+        >>> result = thread.get()
+
+        :param async_req bool
+        :param Order body: Order to be saved.
+        :return: OrderConfirmation
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+        kwargs['_return_http_data_only'] = True
+        if kwargs.get('async_req'):
+            return self.api_order_post_with_http_info(**kwargs)    # noqa: E501
+        (data
+        ) = self.api_order_post_with_http_info(**kwargs)    # noqa: E501
+        return data
+
+    def api_order_post_with_http_info(self, **kwargs):    # noqa: E501
+        """Process an order in our systems.
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.api_order_post_with_http_info(async_req=True)
+        >>> result = thread.get()
+
+        :param async_req bool
+        :param Order body: Order to be saved.
+        :return: OrderConfirmation
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+
+        all_params = ['body']    # noqa: E501
+        all_params.append('async_req')
+        all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError(f"Got an unexpected keyword argument {key}"
+                                " to method api_order_post")
+            params[key] = val
+        del params['kwargs']
+
+        collection_formats = {}
+
+        path_params = {}
+
+        query_params = []
+
+        header_params = {}
+
+        form_params = []
+        local_var_files = {}
+
+        body_params = None
+        if 'body' in params:
+            body_params = params['body']
+        # HTTP header `Accept`
+        header_params['Accept'] = self.api_client.select_header_accept(
+            ['text/plain', 'application/json', 'text/json'])    # noqa: E501
+
+        # HTTP header `Content-Type`
+        header_params[
+            'Content-Type'] = self.api_client.select_header_content_type(    # noqa: E501
+                ['application/json', 'text/json',
+                 'application/*+json'])    # noqa: E501
+
+        # Authentication setting
+        auth_settings = ['TAPI Key']    # noqa: E501
+
+        return self.api_client.call_api(
+            '/api/Order',
+            'POST',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type='OrderConfirmation',    # noqa: E501
+            auth_settings=auth_settings,
+            async_req=params.get('async_req'),
+            _return_http_data_only=params.get('_return_http_data_only'),
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
+
+    def api_order_tracking_number_post(self, **kwargs):    # noqa: E501
+        """Retrieve the tracking numbers associated with the specified orders.
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.api_order_tracking_number_post(async_req=True)
+        >>> result = thread.get()
+
+        :param async_req bool
+        :param list[str] body: List of order numbers base on the OrderType.
+        :param int order_number_type: Type of order number used for the search. Values: 1 (ThibertOrderNumber), 2 (OrderReferenceNumber/WebOrderReference)
+        :return: list[OrderTracking]
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+        kwargs['_return_http_data_only'] = True
+        if kwargs.get('async_req'):
+            return self.api_order_tracking_number_post_with_http_info(
+                **kwargs)    # noqa: E501
+        else:
+            (data) = self.api_order_tracking_number_post_with_http_info(
+                **kwargs)    # noqa: E501
+            return data
+
+    def api_order_tracking_number_post_with_http_info(self,
+                                                      **kwargs):    # noqa: E501
+        """Retrieve the tracking numbers associated with the specified orders.
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.api_order_tracking_number_post_with_http_info(async_req=True)
+        >>> result = thread.get()
+
+        :param async_req bool
+        :param list[str] body: List of order numbers base on the OrderType.
+        :param int order_number_type: Type of order number used for the search. Values: 1 (ThibertOrderNumber), 2 (OrderReferenceNumber/WebOrderReference)
+        :return: list[OrderTracking]
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+        all_params = ['body', 'order_number_type']    # noqa: E501
+        all_params.append('async_req')
+        all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError(f"Got an unexpected keyword argument {key}"
+                                " to method api_order_tracking_number_post")
+            params[key] = val
+        del params['kwargs']
+
+        collection_formats = {}
+
+        path_params = {}
+
+        query_params = []
+        if 'order_number_type' in params:
+            query_params.append(('OrderNumberType',
+                                 params['order_number_type']))    # noqa: E501
+
+        header_params = {}
+
+        form_params = []
+        local_var_files = {}
+
+        body_params = None
+        if 'body' in params:
+            body_params = params['body']
+        # HTTP header `Accept`
+        header_params['Accept'] = self.api_client.select_header_accept(
+            ['text/plain', 'application/json', 'text/json'])    # noqa: E501
+
+        # HTTP header `Content-Type`
+        header_params[
+            'Content-Type'] = self.api_client.select_header_content_type(    # noqa: E501
+                ['application/json', 'text/json',
+                 'application/*+json'])    # noqa: E501
+
+        # Authentication setting
+        auth_settings = ['TAPI Key']    # noqa: E501
+
+        return self.api_client.call_api(
+            '/api/Order/TrackingNumber',
+            'POST',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type='list[OrderTracking]',    # noqa: E501
+            auth_settings=auth_settings,
+            async_req=params.get('async_req'),
+            _return_http_data_only=params.get('_return_http_data_only'),
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
 
 
 def get_paths(url: str = JSON_URL) -> Dict[str, Dict]:
