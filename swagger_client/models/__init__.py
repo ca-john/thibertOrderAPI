@@ -2,13 +2,7 @@
 
 # flake8: noqa
 """
-    TAPI
-
-     
-
-    OpenAPI spec version: V1 DEVELOPMENT
-    
-      
+API Spec for Thibert
 """
 
 from __future__ import absolute_import

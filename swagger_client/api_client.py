@@ -1,12 +1,6 @@
 # coding: utf-8
 """
-    TAPI
-
-     
-
-    OpenAPI spec version: V1 DEVELOPMENT
-    
-      
+API Spec for Thibert
 """
 from __future__ import absolute_import
 
@@ -35,9 +29,7 @@ class ApiClient(object):
     the methods and models for each application are generated from the Swagger
     templates.
 
-     
-    Ref: https://github.com/swagger-api/swagger-codegen
-    Do not edit the class manually.
+    DO NOT EDIT THIS CLASS
 
     :param configuration: .Configuration object for this client
     :param header_name: a header to pass when making calls to the API.

@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 cred.py
+swagger.json
+swagger_client/
 # C extensions
 *.so
 order_log.csv
@@ -62,3 +64,4 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+swagger_client/
