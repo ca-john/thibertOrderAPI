@@ -2,10 +2,10 @@ from __future__ import absolute_import
 
 import copy
 import csv
+import mimetypes
 import certifi
 import io
 import json
-import logging
 import logging
 import multiprocessing
 import os
@@ -16,12 +16,14 @@ import ssl
 import tempfile
 import datetime
 from multiprocessing.pool import ThreadPool
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Callable, Optional
 import requests
 import six
 import urllib3
 from urllib.parse import urlencode
 from six.moves import http_client as httplib
+from six.moves.urllib.parse import quote
+import swagger_client
 
 import cred
 
@@ -43,7 +45,7 @@ ENDPOINT_DICT: Dict = {
     "invoice_pdf":
         "/api/Order/InvoicePDF",
     "vehicle_parts":
-        "/api/FitmentThibert/VehicleParts/{SearchType}/{VehicleYear}/{VehicleMake}/{VehicleModel}"
+        "/api/FitmentThibert/VehicleParts/{SearchType}/{VehicleYear}/{VehicleMake}/{VehicleModel}"    # noqa
 }
 logger = logging.getLogger(__name__)
 
@@ -64,7 +66,7 @@ class TypeWithDefault(type):
 
     def __call__(cls):
         """Return the default instance.
-        
+
         Returns:
             _type_: default instance
         """
@@ -97,7 +99,7 @@ class Configuration(six.with_metaclass(TypeWithDefault, object)):
         # dict to store API prefix (e.g. Bearer)
         self.api_key_prefix = {}
         # function to refresh API key if expired
-        self.refresh_api_key_hook: callable = None
+        self.refresh_api_key_hook: Callable = None
         # Username for HTTP basic authentication
         self.username = ""
         # Password for HTTP basic authentication
@@ -251,7 +253,7 @@ class Configuration(six.with_metaclass(TypeWithDefault, object)):
         if key:
             prefix = self.api_key_prefix.get(identifier)
             if prefix:
-                return "%s %s" % (prefix, key)
+                return f"{prefix} {key}"
             else:
                 return key
 
@@ -282,35 +284,46 @@ class Configuration(six.with_metaclass(TypeWithDefault, object)):
 
         :return: The report for debugging.
         """
-        return f"Python SDK Debug Report:\n OS: {sys.platform}\n Python Version: {sys.version}\n Version of the API: V1 DEVELOPMENT\n SDK Package Version: 1.0.0."
+        return f"""Python SDK Debug Report:\n OS: {sys.platform}\n Python Version: {sys.version}\n Version of the API: V1 DEVELOPMENT\n SDK Package Version: 1.0.0."""    # noqa: E501
 
 
 class RESTResponse(io.IOBase):
+    """RESTResponse wraps the urllib3 HTTPResponse object."""
 
     def __init__(self, resp):
+        """Initialize the constructor for the RESTResponse class.
+
+        Args:
+            resp (_type_): Response object from urllib3.
+        """
         self.urllib3_response = resp
         self.status = resp.status
         self.reason = resp.reason
         self.data = resp.data
 
     def getheaders(self):
-        """Returns a dictionary of the response headers."""
+        """Return a dictionary of the response headers."""
         return self.urllib3_response.getheaders()
 
     def getheader(self, name, default=None):
-        """Returns a given response header."""
+        """Return a given response header."""
         return self.urllib3_response.getheader(name, default)
 
 
 class RESTClientObject(object):
+    """The RESTClientObject for OpenAPI client library builds on urllib3."""
 
-    def __init__(self, configuration, pools_size=4, maxsize=None):
-        # urllib3.PoolManager will pass all kw parameters to connectionpool
-        # https://github.com/shazow/urllib3/blob/f9409436f83aeb79fbaf090181cd81b784f1b8ce/urllib3/poolmanager.py#L75  # noqa: E501
-        # https://github.com/shazow/urllib3/blob/f9409436f83aeb79fbaf090181cd81b784f1b8ce/urllib3/connectionpool.py#L680  # noqa: E501
-        # maxsize is the number of requests to host that are allowed in parallel  # noqa: E501
-        # Custom SSL certificates and client certificates: http://urllib3.readthedocs.io/en/latest/advanced-usage.html  # noqa: E501
+    def __init__(self,
+                 configuration: Configuration,
+                 pools_size=4,
+                 maxsize=None):
+        """Initialize the constructor for the RESTClientObject class.
 
+        Args:
+            configuration (Configuration): Configuration object for the client.
+            pools_size (int, optional): The pool size. Defaults to 4.
+            maxsize (_type_, optional): Max size. Defaults to None.
+        """
         # cert_reqs
         if configuration.verify_ssl:
             cert_reqs = ssl.CERT_REQUIRED
@@ -397,8 +410,7 @@ class RESTClientObject(object):
 
         timeout = None
         if _request_timeout:
-            if isinstance(_request_timeout, (int,) if six.PY3 else
-                          (int, long)):    # noqa: E501,F821
+            if isinstance(_request_timeout, (int,)):    # noqa: E501,F821
                 timeout = urllib3.Timeout(total=_request_timeout)
             elif (isinstance(_request_timeout, tuple)
                   and len(_request_timeout) == 2):
@@ -494,6 +506,22 @@ class RESTClientObject(object):
             query_params=None,
             _preload_content=True,
             _request_timeout=None):
+        """Send GET request.
+
+        Args:
+            url (_type_): The URL to send the request to.
+            headers (_type_, optional): Headers to include in the call.
+                                        Defaults to None.
+            query_params (_type_, optional): Query parameters for the call.
+                                            Defaults to None.
+            _preload_content (bool, optional): The preload content.
+                                                Defaults to True.
+            _request_timeout (_type_, optional): Timeout for the request.
+                                                Defaults to None.
+
+        Returns:
+            _type_: The response from the REST call.
+        """
         return self.request("GET",
                             url,
                             headers=headers,
@@ -507,6 +535,21 @@ class RESTClientObject(object):
              query_params=None,
              _preload_content=True,
              _request_timeout=None):
+        """Send a HEAD request.
+
+        Args:
+            url (_type_): The base URL to send the request to.
+            headers (_type_, optional): Headers to include. Defaults to None.
+            query_params (_type_, optional): Query parameters to include.
+                                                Defaults to None.
+            _preload_content (bool, optional): The preload content.
+                                                Defaults to True.
+            _request_timeout (_type_, optional): Request timeout for the call.
+                                                Defaults to None.
+
+        Returns:
+            _type_: The response from the REST call.
+        """
         return self.request("HEAD",
                             url,
                             headers=headers,
@@ -520,8 +563,23 @@ class RESTClientObject(object):
                 query_params=None,
                 post_params=None,
                 body=None,
-                _preload_content=True,
-                _request_timeout=None):
+                _preload_content: bool = True,
+                _request_timeout: Optional[int] = None) -> None:
+        """Send an OPTIONS request.
+
+        Args:
+            url (_type_): The base URL to send the request to.
+            headers (_type_, optional): Headers to include. Defaults to None.
+            query_params (_type_, optional): Query parameters to include.
+                                                Defaults to None.
+            _preload_content (bool, optional): The preload content.
+                                                Defaults to True.
+            _request_timeout (_type_, optional): Request timeout for the call.
+                                                Defaults to None.
+
+        Returns:
+            _type_: The response from the REST call.
+        """
         return self.request("OPTIONS",
                             url,
                             headers=headers,
@@ -576,11 +634,15 @@ class RESTClientObject(object):
         Args:
             url (_type_): The full URL to request, including scheme and
             headers (_type_, optional): Headers to include. Defaults to None.
-            query_params (_type_, optional): Query parameters for the call. Defaults to None.
-            post_params (_type_, optional): Post parameters for the call. Defaults to None.
+            query_params (_type_, optional): Query parameters for the call.
+                                            Defaults to None.
+            post_params (_type_, optional): Post parameters for the call.
+                                            Defaults to None.
             body (_type_, optional): Body of the call. Defaults to None.
-            _preload_content (bool, optional): The preload content. Defaults to True.
-            _request_timeout (_type_, optional): Request timeout. Defaults to None.
+            _preload_content (bool, optional): The preload content.
+                                                Defaults to True.
+            _request_timeout (_type_, optional): Request timeout.
+                                                Defaults to None.
 
         Returns:
             _type_: The response.
@@ -607,11 +669,15 @@ class RESTClientObject(object):
         Args:
             url (_type_): The full URL to make the request to.
             headers (_type_, optional): Headers to include. Defaults to None.
-            query_params (_type_, optional): Query parameters for the all. Defaults to None.
-            post_params (_type_, optional): Post parameters for the call. Defaults to None.
+            query_params (_type_, optional): Query parameters for the all.
+                                            Defaults to None.
+            post_params (_type_, optional): Post parameters for the call.
+                                            Defaults to None.
             body (_type_, optional): Body of the call. Defaults to None.
-            _preload_content (bool, optional): Preload content. Defaults to True.
-            _request_timeout (_type_, optional): Timeout duration. Defaults to None.
+            _preload_content (bool, optional): Preload content.
+                                                Defaults to True.
+            _request_timeout (_type_, optional): Timeout duration.
+                                                Defaults to None.
 
         Returns:
             _type_: The response from the API call.
@@ -633,7 +699,8 @@ class ApiException(Exception):
         """Initialize the constructor.
 
         Args:
-            status (_type_, optional): Status of the exception. Defaults to None.
+            status (_type_, optional): Status of the exception.
+                                        Defaults to None.
             reason (_type_, optional): Reason of exit. Defaults to None.
             http_resp (_type_, optional): HTTP response code. Defaults to None.
         """
@@ -690,10 +757,11 @@ class ApiClient(object):
                  header_name=None,
                  header_value=None,
                  cookie=None):
-        """ Initialize the ApiClient.
+        """Initialize the ApiClient.
 
         Args:
-            configuration (_type_, optional): Configuration for the API. Defaults to None.
+            configuration (_type_, optional): Configuration for the API.
+                                                Defaults to None.
             header_name (_type_, optional): Header names. Defaults to None.
             header_value (_type_, optional): Header values. Defaults to None.
             cookie (_type_, optional): Cookie to use. Defaults to None.
@@ -703,7 +771,7 @@ class ApiClient(object):
         self.configuration = configuration
 
         self.pool = ThreadPool()
-        self.rest_client = rest.RESTClientObject(configuration)
+        self.rest_client = RESTClientObject(configuration)
         self.default_headers = {}
         if header_name is not None:
             self.default_headers[header_name] = header_value
@@ -834,7 +902,9 @@ class ApiClient(object):
         elif isinstance(obj, self.PRIMITIVE_TYPES):
             return obj
         elif isinstance(obj, list):
-            return [self.sanitize_for_serialization(sub_obj) for sub_obj in obj]
+            return [
+                self.sanitize_for_serialization(sub_obj) for sub_obj in obj
+            ]
         elif isinstance(obj, tuple):
             return tuple(
                 self.sanitize_for_serialization(sub_obj) for sub_obj in obj)
@@ -940,7 +1010,7 @@ class ApiClient(object):
                  collection_formats=None,
                  _preload_content=True,
                  _request_timeout=None):
-        """Makes the HTTP request (synchronous) and returns deserialized data.
+        """Make the HTTP request (synchronous) and returns deserialized data.
 
         To make an async request, set the async_req parameter.
 
@@ -1089,7 +1159,7 @@ class ApiClient(object):
         return new_params
 
     def prepare_post_parameters(self, post_params=None, files=None):
-        """Builds form parameters.
+        """Build form parameters.
 
         :param post_params: Normal form parameters.
         :param files: File parameters.
@@ -1117,7 +1187,7 @@ class ApiClient(object):
         return params
 
     def select_header_accept(self, accepts):
-        """Returns `Accept` based on an array of accepts provided.
+        """Return `Accept` based on an array of accepts provided.
 
         :param accepts: List of headers.
         :return: Accept (e.g. application/json).
@@ -1233,7 +1303,7 @@ class ApiClient(object):
         except ImportError:
             return string
         except ValueError:
-            raise rest.ApiException(
+            raise ApiException(
                 status=0,
                 reason="Failed to parse `{0}` as date object".format(string))
 
@@ -1251,7 +1321,7 @@ class ApiClient(object):
         except ImportError:
             return string
         except ValueError:
-            raise rest.ApiException(
+            raise ApiException(
                 status=0,
                 reason=(
                     "Failed to parse `{0}` as datetime object".format(string)))
@@ -1296,7 +1366,6 @@ class Contact(object):
     """A class to represent a contact.
 
     Do not edit the class manually.
-    
     Attributes:
       swagger_types (dict): The key is attribute name
                             and the value is attribute type.
@@ -1438,7 +1507,6 @@ class Address(object):
     """Class for Address.
 
     Do not edit the class manually.
-    
     Attributes:
       swagger_types (dict): The key is attribute name
                             and the value is attribute type.
@@ -1715,7 +1783,9 @@ class OrderLine(object):
         "quantity": "quantity"
     }
 
-    def __init__(self, thibert_part_number=None, quantity=None):    # noqa: E501
+    def __init__(self,
+                 thibert_part_number=None,
+                 quantity=None):    # noqa: E501
         """Orderline - a model defined in Swagger."""
         self._thibert_part_number = None
         self._quantity = None
@@ -2012,7 +2082,8 @@ class APIConnector:
 
         Args:
             endpoint (str): The url endpoint.
-            params (Any, optional): Parameters to the endpoint. Defaults to None.
+            params (Any, optional): Parameters to the endpoint.
+                                    Defaults to None.
 
         Returns:
             Any: The response data.
@@ -2054,13 +2125,22 @@ class APIConnector:
 class OrderApi(object):
     """DO NOT EDIT THIS CLASS."""
 
-    def __init__(self, api_client=None):
+    def __init__(self, api_client: ApiClient = None):
+        """Initialize a new OrderApi with given client.
+
+        Args:
+            api_client (ApiClient, optional): The API Client to use.
+                                            Defaults to None.
+        """
         if api_client is None:
             api_client = ApiClient()
         self.api_client = api_client
 
     def api_order_invoice_pdf_get(self, **kwargs):    # noqa: E501
-        """Download a base64 string representation of an invoice PDF. The response must be parsed into a PDF on the caller's side.
+        """
+
+        Download a base64 string representation of an invoice PDF.
+        The response must be parsed into a PDF on the caller's side.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
@@ -2069,7 +2149,7 @@ class OrderApi(object):
 
         :param async_req bool
         :param str invoice_id: Invoice number
-        :param str original_order_id: Order number related to the specified invoice
+        :param str original_order_id: Order number of the specified invoice
         :return: str
                  If the method is called asynchronously,
                  returns the request thread.
@@ -2085,16 +2165,19 @@ class OrderApi(object):
 
     def api_order_invoice_pdf_get_with_http_info(self,
                                                  **kwargs):    # noqa: E501
-        """Download a base64 string representation of an invoice PDF. The response must be parsed into a PDF on the caller's side.
+        """
+
+        Download a base64 string representation of an invoice PDF.
+        The response must be parsed into a PDF on the caller's side.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
-        >>> thread = api.api_order_invoice_pdf_get_with_http_info(async_req=True)
+        >>> thread = api.api_order_invoice_pdf_get_with_http_info(async_req=True) # noqa
         >>> result = thread.get()
 
         :param async_req bool
         :param str invoice_id: Invoice number
-        :param str original_order_id: Order number related to the specified invoice
+        :param str original_order_id: Order number related to the specified invoice # noqa
         :return: str
                  If the method is called asynchronously,
                  returns the request thread.
@@ -2219,7 +2302,8 @@ class OrderApi(object):
             query_params.append(
                 ('startDate', params['start_date']))    # noqa: E501
         if 'end_date' in params:
-            query_params.append(('endDate', params['end_date']))    # noqa: E501
+            query_params.append(
+                ('endDate', params['end_date']))    # noqa: E501
         if 'page' in params:
             query_params.append(('page', params['page']))    # noqa: E501
 
@@ -2263,7 +2347,7 @@ class OrderApi(object):
 
         :param async_req bool
         :param list[str] body: List of order numbers base on the OrderType
-        :param int order_number_type: Type of order number used for the search. Values: 1 (ThibertOrderNumber), 2 (OrderReferenceNumber/WebOrderReference)
+        :param int order_number_type: Type of order number used for the search. Values: 1 (ThibertOrderNumber), 2 (OrderReferenceNumber/WebOrderReference)  # noqa
         :param int page_number: Number of the page to retrieve. Default value: 1
         :param int page_size: Number of results per page. Default value: 50, Maximum allowed: 200
         :return: list[OrderStatus]
@@ -2281,7 +2365,7 @@ class OrderApi(object):
 
     def api_order_order_status_post_with_http_info(self,
                                                    **kwargs):    # noqa: E501
-        """Retrieve the order status associated with the specified order numbers. If there is no order number specified, all orders will be returned.
+        """Retrieve the order status associated with the specified order numbers. If there is no order number specified, all orders will be returned.  # noqa.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
@@ -2399,7 +2483,6 @@ class OrderApi(object):
                  If the method is called asynchronously,
                  returns the request thread.
         """
-
         all_params = ['body']    # noqa: E501
         all_params.append('async_req')
         all_params.append('_return_http_data_only')
@@ -2459,7 +2542,7 @@ class OrderApi(object):
             collection_formats=collection_formats)
 
     def api_order_tracking_number_post(self, **kwargs):    # noqa: E501
-        """Retrieve the tracking numbers associated with the specified orders.
+        """Retrieve the tracking numbers associated with the specified orders.  # noqa.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
@@ -2482,18 +2565,18 @@ class OrderApi(object):
                 **kwargs)    # noqa: E501
             return data
 
-    def api_order_tracking_number_post_with_http_info(self,
-                                                      **kwargs):    # noqa: E501
+    def api_order_tracking_number_post_with_http_info(
+            self, **kwargs):    # noqa: E501
         """Retrieve the tracking numbers associated with the specified orders.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
-        >>> thread = api.api_order_tracking_number_post_with_http_info(async_req=True)
+        >>> thread = api.api_order_tracking_number_post_with_http_info(async_req=True)  # noqa
         >>> result = thread.get()
 
         :param async_req bool
         :param list[str] body: List of order numbers base on the OrderType.
-        :param int order_number_type: Type of order number used for the search. Values: 1 (ThibertOrderNumber), 2 (OrderReferenceNumber/WebOrderReference)
+        :param int order_number_type: Type of order number used for the search. Values: 1 (ThibertOrderNumber), 2 (OrderReferenceNumber/WebOrderReference)  # noqa
         :return: list[OrderTracking]
                  If the method is called asynchronously,
                  returns the request thread.
@@ -2564,7 +2647,8 @@ def get_paths(url: str = JSON_URL) -> Dict[str, Dict]:
     """Get the paths from the OpenAPI JSON file.
 
     Args:
-        url (str, optional): The url to the JSON specification file. Defaults to JSON_URL.
+        url (str, optional): The url to the JSON specification file.
+                            Defaults to JSON_URL.
 
     Returns:
         Dict[str, Dict]: Return the paths from the JSON file.
@@ -2580,7 +2664,7 @@ def get_paths(url: str = JSON_URL) -> Dict[str, Dict]:
 def write_order_log(order_number: str,
                     order_date: str,
                     filename: str = LOG_FILE) -> None:
-    """Write order the log to the log file, if it exists. Create the file if it does not.
+    """Write order the log to the log file, if it exists. Create the file if it does not.  # noqa
 
     Args:
         filename (str, optional): The file name of the log file. Defaults to LOG_FILE.
@@ -2609,8 +2693,9 @@ def write_order_log(order_number: str,
 
 def main():
     """Start the main entry point of the app.
-    
-    This is where we get the input from the user and create the order and submit it.
+
+    This is where we get the input from the user and
+    create the order and submit it.
     """
     # api = CarLightingDistrictAPI()
 
@@ -2708,11 +2793,11 @@ def main():
 
     print(order)
 
-    #order.order(order_obj)
+    # order.order(order_obj)
 
     print(order_obj.to_str())
     print(
-        "---CONFIRM THAT THE INFORMATION IS CORRECT BEFORE SUBMITTING THE ORDER.---"
+        "---CONFIRM THAT THE INFORMATION IS CORRECT BEFORE SUBMITTING THE ORDER.---"  # noqa
     )
 
     if input("Submit the order? (y/n): ") == "y":
