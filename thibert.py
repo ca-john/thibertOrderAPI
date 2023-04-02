@@ -23,9 +23,10 @@ import urllib3
 from urllib.parse import urlencode
 from six.moves import http_client as httplib
 from six.moves.urllib.parse import quote
-import swagger_client
+#import swagger_client
 
 import cred
+import models
 
 HOST: str = cred.HOST
 KEY: str = cred.KEY
@@ -884,7 +885,7 @@ class ApiClient(object):
                     response_data.getheaders())
 
     def sanitize_for_serialization(self, obj):
-        """Builds a JSON POST object.
+        """Build a JSON POST object.
 
         If obj is None, return None.
         If obj is str, int, long, float, bool, return directly.
@@ -981,7 +982,7 @@ class ApiClient(object):
             if klass in self.NATIVE_TYPES_MAPPING:
                 klass = self.NATIVE_TYPES_MAPPING[klass]
             else:
-                klass = getattr(swagger_client.models, klass)
+                klass = getattr(models, klass)
 
         if klass in self.PRIMITIVE_TYPES:
             return self.__deserialize_primitive(data, klass)
@@ -1071,7 +1072,7 @@ class ApiClient(object):
                 body=None,
                 _preload_content=True,
                 _request_timeout=None):
-        """Makes the HTTP request using RESTClient."""
+        """Make the HTTP request using RESTClient."""
         if method == "GET":
             return self.rest_client.GET(url,
                                         query_params=query_params,
@@ -2137,10 +2138,7 @@ class OrderApi(object):
         self.api_client = api_client
 
     def api_order_invoice_pdf_get(self, **kwargs):    # noqa: E501
-        """
-
-        Download a base64 string representation of an invoice PDF.
-        The response must be parsed into a PDF on the caller's side.
+        """Download a base64 string representation of an invoice PDF. The response must be parsed into a PDF on the caller's side.  # noqa.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
@@ -2165,10 +2163,7 @@ class OrderApi(object):
 
     def api_order_invoice_pdf_get_with_http_info(self,
                                                  **kwargs):    # noqa: E501
-        """
-
-        Download a base64 string representation of an invoice PDF.
-        The response must be parsed into a PDF on the caller's side.
+        """Download a base64 string representation of an invoice PDF. The response must be parsed into a PDF on the caller's side.  # noqa.
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
@@ -2664,7 +2659,7 @@ def get_paths(url: str = JSON_URL) -> Dict[str, Dict]:
 def write_order_log(order_number: str,
                     order_date: str,
                     filename: str = LOG_FILE) -> None:
-    """Write order the log to the log file, if it exists. Create the file if it does not.  # noqa
+    """Write order the log to the log file, if it exists. Create the file if it does not.  # noqa.
 
     Args:
         filename (str, optional): The file name of the log file. Defaults to LOG_FILE.
@@ -2789,19 +2784,19 @@ def main():
     # order_obj.contact_info = contact
     # order_obj.shipping_address = customer_address
 
-    order = OrderApi()
-
-    print(order)
+    order_api = OrderApi()
 
     # order.order(order_obj)
 
     print(order_obj.to_str())
     print(
-        "---CONFIRM THAT THE INFORMATION IS CORRECT BEFORE SUBMITTING THE ORDER.---"  # noqa
+        "---CONFIRM THAT THE INFORMATION IS CORRECT BEFORE SUBMITTING THE ORDER.---"    # noqa
     )
 
     if input("Submit the order? (y/n): ") == "y":
         print("Submitting the order...")
+        res = order_api.api_order_post(order_obj)
+        print(f"The result of the call is: {res}")
     else:
         print("Cancelled - Order not submitted.")
 
