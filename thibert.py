@@ -2686,7 +2686,7 @@ def write_order_log(order_number: str,
     file.close()
 
 
-def main():
+def cli_input():
     """Start the main entry point of the app.
 
     This is where we get the input from the user and
@@ -2787,6 +2787,65 @@ def main():
     order_api = OrderApi()
 
     # order.order(order_obj)
+
+    print(order_obj.to_str())
+    print(
+        "---CONFIRM THAT THE INFORMATION IS CORRECT BEFORE SUBMITTING THE ORDER.---"    # noqa
+    )
+
+    if input("Submit the order? (y/n): ") == "y":
+        print("Submitting the order...")
+        res = order_api.api_order_post(order_obj)
+        print(f"The result of the call is: {res}")
+    else:
+        print("Cancelled - Order not submitted.")
+
+
+
+def main():
+    """Start the main entry point of the app."""
+    ref_number: str = "123456"
+    customer_name: str = "Momin Naseem"
+    customer_shipping_address1: str = "123 Road Blvd"
+    customer_shipping_address2: str = ""
+    customer_zip_code: str = "L1L 1L1"
+    customer_city: str = "Toronto"
+    customer_state: str = "ON"
+    country_code: str = "CA"
+
+    contact_name: str = "Bob"
+    contact_email: str = "bob@mail.com"
+    contact_phone_number: str = "905-123-4567"
+
+    order_lines: List[OrderLine] = []
+    line_item = OrderLine()
+    line_item.thibert_part_number = "part_number"
+    line_item.quantity = 2
+    order_lines.append(line_item)
+
+    # Contact for the order
+    contact = Contact(name=contact_name,
+                      email=contact_email,
+                      phone_number=contact_phone_number)
+
+    # Customer for the order
+    customer_address = Address(name=customer_name,
+                               address1=customer_shipping_address1,
+                               address2=customer_shipping_address2,
+                               zip_code=customer_zip_code,
+                               city=customer_city,
+                               state=customer_state,
+                               country_code=country_code)
+    order_obj = Order(order_reference_number=ref_number,
+                      contact_info=contact,
+                      shipping_address=customer_address,
+                      order_lines=order_lines)
+
+    # Configure API key authorization: TAPI Key
+    configuration = Configuration()
+    configuration.api_key['x-api-key'] = KEY
+
+    order_api = OrderApi()
 
     print(order_obj.to_str())
     print(
