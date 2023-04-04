@@ -2801,7 +2801,6 @@ def cli_input():
         print("Cancelled - Order not submitted.")
 
 
-
 def main():
     """Start the main entry point of the app."""
     ref_number: str = "123456"
@@ -2854,8 +2853,15 @@ def main():
 
     if input("Submit the order? (y/n): ") == "y":
         print("Submitting the order...")
-        res = order_api.api_order_post(order_obj)
-        print(f"The result of the call is: {res}")
+        try:
+            # Sends the order to the API
+            api_response = order_api.api_order_post(order_obj)
+            pprint(api_response)
+        except ApiException as e:
+            print(f"Exception when calling OrderApi->order: {e}\n")
+
+        # res = order_api.api_order_post(order_obj)
+        # print(f"The result of the call is: {res}")
     else:
         print("Cancelled - Order not submitted.")
 
