@@ -28,11 +28,18 @@ from six.moves.urllib.parse import quote
 import cred
 import models
 
+from os import path
+import mysql.connector as msql
+from mysql.connector import Error
+from sqlalchemy import create_engine, Engine, text
+import pandas as pd
+
 HOST: str = cred.HOST
 KEY: str = cred.KEY
 JSON_URL: str = cred.JSON_URL
 LOG_FILE: str = "order_log.csv"
 TIMEOUT = 500    # seconds
+TABLE_NAME: str = "thibert_orders"
 
 ENDPOINT_DICT: Dict = {
     "order":
@@ -480,12 +487,13 @@ class RESTClientObject(object):
                     raise ApiException(status=0, reason=msg)
             # For `GET`, `HEAD`
             else:
-                r = self.pool_manager.request(method,
-                                              url,
-                                              fields=query_params,
-                                              preload_content=_preload_content,
-                                              timeout=timeout,
-                                              headers=headers)
+                r = self.pool_manager.request(
+                    method,
+                    url,
+                    fields=query_params,
+                    preload_content=_preload_content,
+                    timeout=timeout,
+                    headers=headers)
         except urllib3.exceptions.SSLError as e:
             msg = f"{type(e).__name__}\n{str(e)}"
             raise ApiException(status=0, reason=msg)
@@ -849,7 +857,8 @@ class ApiClient(object):
                                                     collection_formats)
 
         # auth setting
-        self.update_params_for_auth(header_params, query_params, auth_settings)
+        self.update_params_for_auth(header_params, query_params,
+                                    auth_settings)
 
         # body
         if body:
@@ -1183,7 +1192,8 @@ class ApiClient(object):
                         mimetype = (mimetypes.guess_type(filename)[0]
                                     or 'application/octet-stream')
                         params.append(
-                            tuple([k, tuple([filename, filedata, mimetype])]))
+                            tuple([k,
+                                   tuple([filename, filedata, mimetype])]))
 
         return params
 
@@ -1237,7 +1247,8 @@ class ApiClient(object):
                 elif auth_setting['in'] == 'header':
                     headers[auth_setting['key']] = auth_setting['value']
                 elif auth_setting['in'] == 'query':
-                    querys.append((auth_setting['key'], auth_setting['value']))
+                    querys.append(
+                        (auth_setting['key'], auth_setting['value']))
                 else:
                     raise ValueError(
                         'Authentication token must be in `query` or `header`')
@@ -1324,8 +1335,8 @@ class ApiClient(object):
         except ValueError:
             raise ApiException(
                 status=0,
-                reason=(
-                    "Failed to parse `{0}` as datetime object".format(string)))
+                reason=("Failed to parse `{0}` as datetime object".format(
+                    string)))
 
     def __hasattr(self, object, name):
         return name in object.__class__.__dict__
@@ -1413,8 +1424,8 @@ class Contact(object):
         :type: str
         """
         if name is None:
-            raise ValueError(
-                "Invalid value for `name`, must not be `None`")    # noqa: E501
+            raise ValueError("Invalid value for `name`, must not be `None`"
+                            )    # noqa: E501
         self._name = name
 
     @property
@@ -1495,6 +1506,124 @@ class Contact(object):
     def __eq__(self, other):
         """Return true if both objects are equal."""
         if not isinstance(other, Contact):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        """Return true if both objects are not equal."""
+        return not self == other
+
+
+class OrderConfirmation(object):
+    """A model to represent an order confirmation."""
+    """
+    Attributes:
+      swagger_types (dict): The key is attribute name
+                            and the value is attribute type.
+      attribute_map (dict): The key is attribute name
+                            and the value is json key in definition.
+    """
+    swagger_types = {'order_number': 'str', 'creation_date': 'datetime'}
+
+    attribute_map = {
+        'order_number': 'orderNumber',
+        'creation_date': 'creationDate'
+    }
+
+    def __init__(self, order_number=None, creation_date=None):    # noqa: E501
+        """OrderConfirmation - a model defined in Swagger"""    # noqa: E501.
+        self._order_number = None
+        self._creation_date = None
+        self.discriminator = None
+        if order_number is not None:
+            self.order_number = order_number
+        if creation_date is not None:
+            self.creation_date = creation_date
+
+    @property
+    def order_number(self):
+        """Get the order_number of this OrderConfirmation.  # noqa: E501.
+
+        Internal identifier for the order.  # noqa: E501
+
+        :return: The order_number of this OrderConfirmation.  # noqa: E501
+        :rtype: str
+        """
+        return self._order_number
+
+    @order_number.setter
+    def order_number(self, order_number):
+        """Set the order_number of this OrderConfirmation.
+
+        Internal identifier for the order.  # noqa: E501
+
+        :param order_number: The order_number of this OrderConfirmation.  # noqa: E501
+        :type: str
+        """
+
+        self._order_number = order_number
+
+    @property
+    def creation_date(self):
+        """Get the creation_date of this OrderConfirmation.  # noqa: E501.
+
+        Date when the order was processed.  # noqa: E501
+
+        :return: The creation_date of this OrderConfirmation.  # noqa: E501
+        :rtype: datetime
+        """
+        return self._creation_date
+
+    @creation_date.setter
+    def creation_date(self, creation_date):
+        """Set the creation_date of this OrderConfirmation.
+
+        Date when the order was processed.  # noqa: E501
+
+        :param creation_date: The creation_date of this OrderConfirmation.  # noqa: E501
+        :type: datetime
+        """
+
+        self._creation_date = creation_date
+
+    def to_dict(self):
+        """Return the model properties as a dict."""
+        result = {}
+
+        for attr, _ in six.iteritems(self.swagger_types):
+            value = getattr(self, attr)
+            if isinstance(value, list):
+                result[attr] = list(
+                    map(lambda x: x.to_dict()
+                        if hasattr(x, "to_dict") else x, value))
+            elif hasattr(value, "to_dict"):
+                result[attr] = value.to_dict()
+            elif isinstance(value, dict):
+                result[attr] = dict(
+                    map(
+                        lambda item: (item[0], item[1].to_dict())
+                        if hasattr(item[1], "to_dict") else item,
+                        value.items()))
+            else:
+                result[attr] = value
+        if issubclass(OrderConfirmation, dict):
+            for key, value in self.items():
+                result[key] = value
+
+        return result
+
+    def to_str(self):
+        """Return the string representation of the model."""
+        return pprint.pformat(self.to_dict())
+
+    def __repr__(self):
+        """For `print` and `pprint`."""
+        return self.to_str()
+
+    def __eq__(self, other):
+        """Return true if both objects are equal."""
+        if not isinstance(other, OrderConfirmation):
             return False
 
         return self.__dict__ == other.__dict__
@@ -2376,8 +2505,9 @@ class OrderApi(object):
                  If the method is called asynchronously,
                  returns the request thread.
         """
-        all_params = ['body', 'order_number_type', 'page_number',
-                      'page_size']    # noqa: E501
+        all_params = [
+            'body', 'order_number_type', 'page_number', 'page_size'
+        ]    # noqa: E501
         all_params.append('async_req')
         all_params.append('_return_http_data_only')
         all_params.append('_preload_content')
@@ -2460,7 +2590,8 @@ class OrderApi(object):
         """
         kwargs['_return_http_data_only'] = True
         if kwargs.get('async_req'):
-            return self.api_order_post_with_http_info(**kwargs)    # noqa: E501
+            return self.api_order_post_with_http_info(**
+                                                      kwargs)    # noqa: E501
         (data) = self.api_order_post_with_http_info(**kwargs)    # noqa: E501
         return data
 
@@ -2801,6 +2932,53 @@ def cli_input():
         print("Cancelled - Order not submitted.")
 
 
+def create_sql_engine() -> Engine:
+    """Create a sql engine to connect to the database.
+
+    Returns:
+        Engine: Engine to connect to the database
+    """
+    creds = {
+        'usr': cred.DEFAULT_USER,
+        'pwd': cred.DEFAULT_PWD,
+        'hst': cred.DEFAULT_HOST,
+        'prt': cred.DEFAULT_PORT,
+        'dbn': cred.DATABASE_NAME
+    }
+    connstr = 'mysql+mysqlconnector://{usr}:{pwd}@{hst}:{prt}/{dbn}'
+    engine = create_engine(connstr.format(**creds))
+    return engine
+
+
+def write_to_db(conf: OrderConfirmation, order: Order):
+    """Write the order confirmation to the database.
+
+    Args:
+        conf (OrderConfirmation): The order confirmation object
+    """
+    engine: Engine = create_sql_engine()
+    confirmation_obj: pd.DataFrame = pd.DataFrame.from_records(
+        [conf.to_dict()])
+    print("DATAFRAME:")
+    print(confirmation_obj)
+    # confirmation_obj.to_sql(name=TABLE_NAME,
+    #                         con=engine,
+    #                         if_exists='append',
+    #                         index=False)
+    order_obj: pd.DataFrame = pd.DataFrame.from_records([order.to_dict()])
+
+    # pd.DataFrame(conf.to_dict()).to_sql(name=TABLE_NAME,
+    #                                     con=engine,
+    #                                     if_exists='append',
+    #                                     index=False)
+    result = pd.concat([confirmation_obj, order_obj], axis=1, join="inner")
+    print(result.columns)
+    result.to_sql(name=TABLE_NAME,
+                  con=engine,
+                  if_exists='append',
+                  index=False)
+
+
 def main():
     """Start the main entry point of the app."""
     ref_number: str = "123456"
@@ -2842,9 +3020,10 @@ def main():
 
     # Configure API key authorization: TAPI Key
     configuration = Configuration()
+    configuration.host = HOST
     configuration.api_key['x-api-key'] = KEY
 
-    order_api = OrderApi()
+    api_instance = OrderApi(ApiClient(configuration))
 
     print(order_obj.to_str())
     print(
@@ -2855,13 +3034,16 @@ def main():
         print("Submitting the order...")
         try:
             # Sends the order to the API
-            api_response = order_api.api_order_post(order_obj)
-            pprint(api_response)
+            confirmation: OrderConfirmation = api_instance.api_order_post(
+                body=order_obj)
+            print(confirmation)
+            if confirmation:
+                print("Order submitted successfully.")
+                write_order_log(confirmation.order_number,
+                                confirmation.creation_date)
+                # write_to_db(confirmation, order_obj)
         except ApiException as e:
-            print(f"Exception when calling OrderApi->order: {e}\n")
-
-        # res = order_api.api_order_post(order_obj)
-        # print(f"The result of the call is: {res}")
+            print(f"Exception when calling OrderApi->api_order_post: {e}\n")
     else:
         print("Cancelled - Order not submitted.")
 
