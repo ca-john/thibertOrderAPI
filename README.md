@@ -1,4 +1,4 @@
-# thibert-client
+# OpenAPI models and POST APIs for Thibert Inc.
 
 - API version: V1 DEVELOPMENT
 - Package version: 1.0.0
